@@ -22,71 +22,81 @@ const queryClient = new QueryClient();
 
 const HomeRoute = () => <Index />;
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-            <Route path="/license-manager" element={<LicenseGenerator />} />
 
-            {/* Secured Application Routes */}
-          <Route element={<LicenseGate />}>
-            <Route path="/" element={
-              <ProtectedRoute>
-                <HomeRoute />
-              </ProtectedRoute>
-            } />
-            <Route path="/ongoing-orders" element={
-              <ProtectedRoute>
-                <OngoingOrdersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/orders" element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/manage-products" element={
-              <ProtectedRoute>
-                <ManageProductsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/products" element={
-              <ProtectedRoute>
-                <ProductsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/customers" element={
-              <ProtectedRoute>
-                <CustomersPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-              <ProtectedRoute>
-                <ReportsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/rider-deposits" element={
-              <ProtectedRoute>
-                <RiderDepositsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <SettingsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/auth" element={<Welcome />} />
-            <Route path="/login" element={<LoginPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Redirect to /auth (Welcome) on refresh unless already on /auth or /login
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname;
+    if (path !== '/auth' && path !== '/login') {
+      window.location.replace('/auth');
+    }
+  }
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+              <Route path="/license-manager" element={<LicenseGenerator />} />
+
+              {/* Secured Application Routes */}
+            <Route element={<LicenseGate />}>
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <HomeRoute />
+                </ProtectedRoute>
+              } />
+              <Route path="/ongoing-orders" element={
+                <ProtectedRoute>
+                  <OngoingOrdersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <OrdersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/manage-products" element={
+                <ProtectedRoute>
+                  <ManageProductsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <ProductsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/customers" element={
+                <ProtectedRoute>
+                  <CustomersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/rider-deposits" element={
+                <ProtectedRoute>
+                  <RiderDepositsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/auth" element={<Welcome />} />
+              <Route path="/login" element={<LoginPage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
