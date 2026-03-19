@@ -65,7 +65,13 @@ const CartPanel = () => {
   const [pendingAfterRider, setPendingAfterRider] = useState<'none' | 'bill' | 'complete'>('none');
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [cashierName, setCashierName] = useState('Anas');
-  const [orderIsDone, setOrderIsDone] = useState(false);
+  const [orderIsDone, setOrderIsDone] = useState(!!editingOrderId);
+    // Auto-enable Bill/Complete Sale if editing an order
+    useEffect(() => {
+      if (editingOrderId) {
+        setOrderIsDone(true);
+      }
+    }, [editingOrderId]);
   const receiptRef = useRef<HTMLDivElement>(null);
   const kotRef = useRef<HTMLDivElement>(null);
   const billRef = useRef<HTMLDivElement>(null);
@@ -665,7 +671,7 @@ const CartPanel = () => {
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Done
             </Button>
-            <Button variant="outline" className="flex-1 font-bold font-heading uppercase tracking-wider text-xs h-11" onClick={handleShowBill} disabled={items.length === 0 || !orderIsDone}>
+            <Button variant="outline" className="flex-1 font-bold font-heading uppercase tracking-wider text-xs h-11" onClick={handleShowBill} disabled={items.length === 0 || (!orderIsDone && !editingOrderId)}>
               <FileText className="h-4 w-4 mr-2" />
               Bill
             </Button>
@@ -683,7 +689,7 @@ const CartPanel = () => {
             <Button
               className="flex-[2] btn-success font-black font-heading uppercase tracking-widest text-sm h-11 shadow-lg shadow-emerald-500/20"
               onClick={handleCompleteSale}
-              disabled={items.length === 0 || !orderIsDone}
+              disabled={items.length === 0 || (!orderIsDone && !editingOrderId)}
             >
               <Printer className="h-4 w-4 mr-2" />
               Complete Sale
