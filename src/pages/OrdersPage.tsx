@@ -342,9 +342,7 @@ const OrdersPage = () => {
 
       setBillOrder(billData);
       setShowBill(true);
-      setTimeout(() => {
-        handlePrintBill();
-      }, 100);
+      // Printing will only be triggered by the Print button now
     } catch (err) {
       console.error('Error printing bill:', err);
       toast.error('Failed to load order details for bill printing');
