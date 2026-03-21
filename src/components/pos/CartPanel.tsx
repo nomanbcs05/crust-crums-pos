@@ -223,6 +223,7 @@ const CartPanel = () => {
             order_type: orderType,
             table_id: tableId || null,
             server_name: getServerNameWithRole(),
+            customer_address: customerAddress || null,
           };
 
           const orderItemsInsert = items.map(item => ({
@@ -360,6 +361,7 @@ const CartPanel = () => {
       payment_method: 'cash', // Default payment method
       order_type: orderType,
       server_name: getServerNameWithRole(),
+      customer_address: customerAddress || null,
     };
     if (customer?.id) orderInsert.customer_id = String(customer.id);
     if (tableId) orderInsert.table_id = String(tableId);
@@ -403,6 +405,7 @@ const CartPanel = () => {
       order_type: orderType,
       table_id: tableId || null,
       server_name: getServerNameWithRole(),
+      customer_address: customerAddress || null,
     };
 
     const orderItemsInsert = items.map(item => ({

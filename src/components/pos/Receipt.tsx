@@ -87,13 +87,18 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order }, ref) => {
           <p><strong>Rider:</strong> {order.rider.name}</p>
         )}
         {order.customer && (
-          <p><strong>Customer:</strong> {order.customer.name}</p>
+          <>
+            <p><strong>Customer:</strong> {order.customer.name}</p>
+            {order.customer.phone && (
+              <p><strong>PH#:</strong> {order.customer.phone}</p>
+            )}
+            {order.customerAddress && (
+              <p><strong>Address:</strong> {order.customerAddress}</p>
+            )}
+          </>
         )}
-        {order.customerAddress && (
-          <p className="mt-1">
-            <strong>Address:</strong><br />
-            <span className="uppercase text-[10px] break-words">{order.customerAddress}</span>
-          </p>
+        {!order.customer && order.customerAddress && (
+          <p><strong>Address:</strong> {order.customerAddress}</p>
         )}
       </div>
 

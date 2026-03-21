@@ -77,8 +77,8 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
       </div>
 
       {/* Order Number Box */}
-      <div className="border-x border-t border-black p-1 text-center">
-        <div className="text-2xl font-bold">{order.orderNumber.slice(-3)}</div>
+        <div className="border-x border-t border-black p-1 text-center">
+        <div className="text-2xl font-bold">{order.orderNumber}</div>
       </div>
 
       {/* Info Section */}
@@ -86,7 +86,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
         <div className="flex justify-between">
           <span>Invoice #:</span>
           <span className="font-bold">{order.orderNumber}</span>
-          <span>DAY-00{format(order.createdAt, 'dd')}</span>
+          <span>DAY-00{order.orderNumber}</span>
         </div>
         <div className="flex justify-between mt-1">
           <span>Restaurant:</span>
@@ -138,19 +138,23 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
                 <span>{order.customer.phone}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span>CELL#:</span>
-              <span>{order.customer.phone}</span>
-            </div>
+            {order.customerAddress && (
+              <div className="flex justify-between mt-0.5">
+                <span className="font-bold">Address:</span>
+                <span className="text-[10px] text-right break-words max-w-[180px] uppercase">
+                  {order.customerAddress}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {order.customerAddress && (
-          <div className="mt-1 border-t border-dotted border-black pt-1">
-            <span className="font-bold">Address :</span>
-            <p className="break-words uppercase text-[11px] leading-tight mt-0.5">
+        {!order.customer && order.customerAddress && (
+          <div className="flex justify-between mt-1">
+            <span className="font-bold">Address:</span>
+            <span className="text-[10px] text-right break-words max-w-[180px] uppercase">
               {order.customerAddress}
-            </p>
+            </span>
           </div>
         )}
       </div>

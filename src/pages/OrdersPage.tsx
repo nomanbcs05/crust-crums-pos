@@ -251,7 +251,8 @@ const OrdersPage = () => {
         createdAt: new Date(fullOrder.created_at),
         cashierName: displayCashierName,
         serverName: ((fullOrder as any).server_name || '').replace(/^\[.*?\]\s*/, ''),
-        tableId: (fullOrder as any).restaurant_tables?.table_number
+        tableId: (fullOrder as any).restaurant_tables?.table_number,
+        customerAddress: (fullOrder as any).customer_address
       };
 
       setPrintingOrder(formattedOrder);
@@ -288,7 +289,8 @@ const OrdersPage = () => {
         createdAt: new Date(fullOrder.created_at),
         cashierName: displayCashierName,
         serverName: ((fullOrder as any).server_name || '').replace(/^\[.*?\]\s*/, ''),
-        tableId: (fullOrder as any).restaurant_tables?.table_number
+        tableId: (fullOrder as any).restaurant_tables?.table_number,
+        customerAddress: (fullOrder as any).customer_address
       };
 
       setPrintingKOTOrder(formattedOrder);
@@ -337,7 +339,8 @@ const OrdersPage = () => {
         createdAt: new Date(fullOrder.created_at),
         cashierName: displayCashierName,
         serverName: ((fullOrder as any).server_name || '').replace(/^\[.*?\]\s*/, ''),
-        tableId: (fullOrder as any).restaurant_tables?.table_number
+        tableId: (fullOrder as any).restaurant_tables?.table_number,
+        customerAddress: (fullOrder as any).customer_address
       };
 
       setBillOrder(billData);
@@ -416,7 +419,8 @@ const OrdersPage = () => {
     // 3. Return orders with dailyId attached
     return orders.map((order: any) => {
       const dailyId = dailyIdMap.get(order.id);
-      const invoiceNumber = dailyId ? `026B5${dailyId}` : order.id.slice(0, 8).toUpperCase();
+      // Removed 026B5 prefix to match user request for real accurate daily count
+      const invoiceNumber = dailyId || order.id.slice(0, 8).toUpperCase();
       return {
         ...order,
         dailyId,
@@ -809,7 +813,8 @@ const OrdersPage = () => {
                   orderType: viewingOrder.order_type,
                   createdAt: new Date(viewingOrder.created_at),
                   tableId: viewingOrder.restaurant_tables?.table_number,
-                  serverName: viewingOrder.server_name
+                  serverName: viewingOrder.server_name,
+                  customerAddress: viewingOrder.customer_address
                 }} />
               </div>
             )}

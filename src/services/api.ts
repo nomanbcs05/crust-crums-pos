@@ -480,6 +480,7 @@ export const api = {
         payment_method: order.payment_method || 'cash',
         order_type: order.order_type || 'dine_in',
         server_name: order.server_name || null,
+        customer_address: order.customer_address || null,
         created_at: new Date().toISOString()
       };
 
@@ -536,6 +537,7 @@ export const api = {
         payment_method: order.payment_method || 'cash',
         order_type: order.order_type || 'dine_in',
         server_name: order.server_name || null,
+        customer_address: order.customer_address || null,
         created_at: new Date().toISOString()
       };
 
