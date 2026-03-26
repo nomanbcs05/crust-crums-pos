@@ -22,23 +22,44 @@ const printKOT = async (order) => {
             device.open((error) => {
                 if (error) return reject(error);
 
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-');
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
                 printer
                     .font('a')
                     .align('ct')
-                    .style('bu')
-                    .size(1, 1)
-                    .text('KITCHEN ORDER')
-                    .text(`Order: ${order.orderNumber || 'N/A'}`)
-                    .feed(1)
+                    .text('------------------------------------------')
+                    .text('KOT ( KITCHEN )')
+                    .text('------------------------------------------')
                     .align('lt')
-                    .style('normal')
-                    .size(0, 0);
+                    .text(`Print DateTime :    ${dateStr}    ${timeStr}`)
+                    .text(`Order Date :             ${dateStr}`)
+                    .text(`Order #:                 ${order.orderNumber || 'N/A'}`)
+                    .text(`Order Type :             ${(order.orderType || 'N/A').toUpperCase().replace('_', ' ')}`)
+                    .text(`Token #:                 ${order.orderNumber || '00'}`)
+                    .text(`Server:                  ${order.serverName || 'Self Customer'}`)
+                    .feed(1)
+                    .text(`Customer :               ${order.customerName || ''}`)
+                    .text(`Mobile :                 ${order.customerPhone || ''}`)
+                    .text('------------------------------------------')
+                    .text('QTY  ITEM                      CODE')
+                    .text('------------------------------------------');
 
                 order.items.forEach(item => {
-                    printer.text(`${item.product_name || item.product?.name} x ${item.quantity}`);
+                    const qty = String(item.quantity).padEnd(5);
+                    const name = (item.product_name || item.product?.name || 'Item').substring(0, 25).padEnd(26);
+                    const code = (item.sku || '').substring(0, 8);
+                    printer.text(`${qty}${name}${code}`);
                 });
 
-                printer.feed(3).cut().close();
+                printer
+                    .text('------------------------------------------')
+                    .text(`COUNTER:                 ${order.payment_method || 'CASH'}`)
+                    .text(`User:                    ${order.cashierName || 'ANUS CASHIER'}`)
+                    .feed(3)
+                    .cut()
+                    .close();
                 resolve();
             });
         } catch (err) {
@@ -58,17 +79,21 @@ const printBill = async (order) => {
             device.open((error) => {
                 if (error) return reject(error);
 
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-');
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
                 printer
                     .font('a')
                     .align('ct')
                     .style('normal')
                     .size(0, 0)
-                    .text('Near Al Habib bank, Shahdadpur road')
-                    .text('Iserpura, Nawabshah')
-                    .text('0311-4610599')
-                    .text('0334-3610599')
-                    .text('------------------------------------------')
-                    .text('Designed & Developed By Genai Tech')
+                    .text('Near Al Habib Bank')
+                    .text('Shahdadpur Road')
+                    .text('Iserpura Nawab Shah')
+                    .text('03114610599')
+                    .text('03343610599')
+                    .text('Designed & Developed By Smaz:(smazweb.site)')
                     .text('------------------------------------------')
                     .feed(1)
                     .size(1, 1)
@@ -76,35 +101,39 @@ const printBill = async (order) => {
                     .size(0, 0)
                     .text('------------------------------------------')
                     .align('lt')
-                    .text(`Invoice #: ${order.orderNumber || 'N/A'}`)
-                    .text(`Restaurant: CRUST & CRUMS`)
-                    .text(`Cashier: ${order.cashierName || 'Anas'}`)
-                    .text(`Type: ${order.orderType || 'N/A'}`)
-                    .text(`${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`)
+                    .text(`Invoice #:  ${order.orderNumber || 'N/A'}     DAY-00${order.orderNumber || '00'}`)
+                    .text(`Restaurant:     CRUST & CRUMS`)
+                    .text(`${(order.cashierName || 'Anus').toUpperCase()} CASHIER / CASH      ${(order.orderType || 'N/A').toUpperCase().replace('_', ' ')}`)
+                    .text(`${dateStr}                    ${timeStr}`)
+                    .text(`Server :            ${order.serverName || 'Self Customer'}`)
+                    .text(`Customer :          ${order.customerName || 'alsheekhouse'}`)
                     .text('------------------------------------------')
                     .text('Qty  Item                Rate   Amount')
                     .text('------------------------------------------');
 
                 order.items.forEach(item => {
+                    const price = item.price || item.product?.price || 0;
                     const qty = String(item.quantity).padEnd(5);
                     const name = (item.product_name || item.product?.name || 'Item').substring(0, 18).padEnd(20);
-                    const rate = String(item.price || item.product?.price || 0).padEnd(7);
-                    const amount = String((item.price || item.product?.price || 0) * item.quantity);
+                    const rate = String(price).padEnd(7);
+                    const amount = String(price * item.quantity);
                     printer.text(`${qty}${name}${rate}${amount}`);
                 });
 
                 printer
                     .text('------------------------------------------')
                     .align('rt')
-                    .text(`SubTotal : ${order.total || order.total_amount || 0}`)
+                    .text(`SubTotal :              ${order.total || order.total_amount || 0}`)
                     .size(1, 0)
-                    .text(`Net Bill : ${order.total || order.total_amount || 0}`)
+                    .text(`Net Bill :              ${order.total || order.total_amount || 0}`)
                     .size(0, 0)
-                    .text('TIP : ')
+                    .text(`Payment Mode :             ${order.payment_method || 'Cash'}`)
                     .text('------------------------------------------')
                     .align('ct')
-                    .text('!!!!FOR THE LOVE OF FOOD !!!!')
-                    .text('Powered By: GENAI TECHNOLOGY +923342826675')
+                    .text('!!!!FOR THE LOVE OF FOOD!!!!')
+                    .text('Powered By: DEVAJ TECHNOLOGY.')
+                    .text('+92340-5557609,+92322-2135106')
+                    .text('www.devaj.co')
                     .feed(3)
                     .cut()
                     .close();
