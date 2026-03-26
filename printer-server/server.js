@@ -61,26 +61,50 @@ const printBill = async (order) => {
                 printer
                     .font('a')
                     .align('ct')
-                    .style('bu')
-                    .size(1, 1)
-                    .text('CUSTOMER BILL')
-                    .text(`Order: ${order.orderNumber || 'N/A'}`)
-                    .feed(1)
-                    .align('lt')
                     .style('normal')
-                    .size(0, 0);
+                    .size(0, 0)
+                    .text('Near Al Habib bank, Shahdadpur road')
+                    .text('Iserpura, Nawabshah')
+                    .text('0311-4610599')
+                    .text('0334-3610599')
+                    .text('------------------------------------------')
+                    .text('Designed & Developed By Genai Tech')
+                    .text('------------------------------------------')
+                    .feed(1)
+                    .size(1, 1)
+                    .text(order.orderNumber || '00')
+                    .size(0, 0)
+                    .text('------------------------------------------')
+                    .align('lt')
+                    .text(`Invoice #: ${order.orderNumber || 'N/A'}`)
+                    .text(`Restaurant: CRUST & CRUMS`)
+                    .text(`Cashier: ${order.cashierName || 'Anas'}`)
+                    .text(`Type: ${order.orderType || 'N/A'}`)
+                    .text(`${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`)
+                    .text('------------------------------------------')
+                    .text('Qty  Item                Rate   Amount')
+                    .text('------------------------------------------');
 
                 order.items.forEach(item => {
-                    const name = item.product_name || item.product?.name || 'Item';
-                    const qty = item.quantity;
-                    const price = item.price || item.product?.price || 0;
-                    printer.text(`${name} x ${qty} : Rs ${price * qty}`);
+                    const qty = String(item.quantity).padEnd(5);
+                    const name = (item.product_name || item.product?.name || 'Item').substring(0, 18).padEnd(20);
+                    const rate = String(item.price || item.product?.price || 0).padEnd(7);
+                    const amount = String((item.price || item.product?.price || 0) * item.quantity);
+                    printer.text(`${qty}${name}${rate}${amount}`);
                 });
 
                 printer
-                    .feed(1)
+                    .text('------------------------------------------')
                     .align('rt')
-                    .text(`TOTAL: Rs ${order.total || order.total_amount || 0}`)
+                    .text(`SubTotal : ${order.total || order.total_amount || 0}`)
+                    .size(1, 0)
+                    .text(`Net Bill : ${order.total || order.total_amount || 0}`)
+                    .size(0, 0)
+                    .text('TIP : ')
+                    .text('------------------------------------------')
+                    .align('ct')
+                    .text('!!!!FOR THE LOVE OF FOOD !!!!')
+                    .text('Powered By: GENAI TECHNOLOGY +923342826675')
                     .feed(3)
                     .cut()
                     .close();
