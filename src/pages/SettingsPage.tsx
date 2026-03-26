@@ -27,6 +27,7 @@ const SettingsPage = () => {
   const [logoUrl, setLogoUrl] = useState('');
   const [receiptFooter, setReceiptFooter] = useState('Thank you for your visit! Come back soon!');
   const [billFooter, setBillFooter] = useState('!!!!FOR THE LOVE OF FOOD !!!!');
+  const [printerServerIp, setPrinterServerIp] = useState(localStorage.getItem('printer_server_ip') || 'localhost');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cashierDisplayName, setCashierDisplayName] = useState(localStorage.getItem('cashier_display_name') || 'Anas');
@@ -270,9 +271,27 @@ const SettingsPage = () => {
                       onChange={(e) => setBillFooter(e.target.value)}
                     />
                   </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="printerIp">Printer Server IP (PC Address)</Label>
+                    <Input
+                      id="printerIp"
+                      placeholder="e.g. 192.168.1.100 or localhost"
+                      value={printerServerIp}
+                      onChange={(e) => setPrinterServerIp(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the IP address of the PC where your printer server is running.
+                    </p>
+                  </div>
                   
                   <div className="pt-4">
-                    <Button onClick={() => toast.success("Receipt settings saved locally")}>
+                    <Button onClick={() => {
+                      localStorage.setItem('printer_server_ip', printerServerIp);
+                      toast.success("Receipt & Printer settings saved locally");
+                    }}>
                       Save Changes
                     </Button>
                   </div>
