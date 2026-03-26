@@ -40,7 +40,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onSaved }: CustomerSelectionM
         .from('customers')
         .select('*')
         .eq('phone', phone)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (data) {
         setName(data.name);
@@ -77,7 +78,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onSaved }: CustomerSelectionM
         .from('customers')
         .select('*')
         .eq('phone', phone)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       let customerData;
 
@@ -88,7 +90,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onSaved }: CustomerSelectionM
           const { data, error } = await (supabase
             .from('customers') as any)
             .update({ name })
-            .eq('customer_id', idToUpdate)
+            .eq('id', idToUpdate)
             .select()
             .single();
             

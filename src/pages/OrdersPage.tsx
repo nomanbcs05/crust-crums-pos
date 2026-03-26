@@ -745,8 +745,8 @@ const OrdersPage = () => {
           Showing {filteredOrders.length} of {orders.length} orders
         </div>
 
-        {/* Hidden Summary for Printing */}
-        <div className="hidden">
+        {/* Off-screen container for Printing to avoid display:none blank issues */}
+        <div className="print-visible-offscreen">
           <DailySummary
             ref={summaryRef}
             orders={ordersWithDailyId.filter((o: any) => isToday(new Date(o.created_at)))}

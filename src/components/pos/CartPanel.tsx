@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, User, Search, X, Printer, Wallet, ChefHat, FileText, Tag, CheckCircle2 } from 'lucide-react';
+import { Minus, Plus, Trash2, User, Search, X, Printer, Wallet, ChefHat, FileText, Tag, CheckCircle2, Truck } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,10 @@ const CartPanel = () => {
     orderType,
     setOrderType,
     clearCart,
-    discount,
     discountType,
     setDiscount,
     deliveryFee,
+    setDeliveryFee,
     tableId,
     setTableId,
     rider,
@@ -57,6 +57,7 @@ const CartPanel = () => {
 
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'wallet'>('cash');
   const [discountInput, setDiscountInput] = useState('');
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [showKOT, setShowKOT] = useState(false);
   const [showBill, setShowBill] = useState(false);
@@ -653,9 +654,45 @@ const CartPanel = () => {
             </span>
           </div>
 
-          {deliveryFee > 0 && (
-            <div className="flex justify-between">
-              <span className="text-slate-500 font-bold font-heading uppercase tracking-wider text-[10px]">Delivery Fee</span>
+          {orderType === 'delivery' && (
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 text-slate-500 font-bold font-heading uppercase tracking-wider text-[10px]">
+                <span>Delivery Fee</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-5 w-5 rounded-full">
+                      <Truck className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-4" align="start">
+                    <div className="space-y-4">
+                      <h4 className="font-medium leading-none">Set Delivery Fee</h4>
+                      <div className="pt-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount (Rs)"
+                          value={deliveryFeeInput || deliveryFee.toString()}
+                          onChange={(e) => {
+                            setDeliveryFeeInput(e.target.value);
+                            setDeliveryFee(Number(e.target.value));
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setDeliveryFee(0);
+                          setDeliveryFeeInput('0');
+                        }}
+                      >
+                        Free Delivery (Rs 0)
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <span className="font-bold">Rs {deliveryFee.toLocaleString()}</span>
             </div>
           )}

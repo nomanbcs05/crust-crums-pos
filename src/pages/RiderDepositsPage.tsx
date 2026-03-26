@@ -149,7 +149,7 @@ const RiderDepositsPage = () => {
             </div>
           </div>
 
-          <div className="hidden">
+          <div className="print-visible-offscreen">
             <div ref={printRef} className="p-4 font-mono text-[11px]" style={{ width: '80mm' }}>
               <div className="text-center font-bold mb-2 uppercase">Rider Deposits</div>
               <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>

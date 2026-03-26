@@ -24,13 +24,6 @@ const HomeRoute = () => <Index />;
 
 
 const App = () => {
-  // Redirect to /auth (Welcome) on refresh unless already on /auth or /login
-  if (typeof window !== 'undefined') {
-    const path = window.location.pathname;
-    if (path !== '/auth' && path !== '/login') {
-      window.location.replace('/auth');
-    }
-  }
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

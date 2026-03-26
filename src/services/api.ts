@@ -73,6 +73,8 @@ export const api = {
         .from('daily_registers' as any)
         .select('*')
         .eq('status', 'open')
+        .order('opened_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
@@ -295,7 +297,7 @@ export const api = {
       return data;
     },
     delete: async (id: string) => {
-      const { error: nullifyError } = await supabase
+      const { error: nullifyError } = await (supabase as any)
         .from('order_items')
         .update({ product_id: null })
         .eq('product_id', id);
@@ -375,21 +377,21 @@ export const api = {
       if (error) throw error;
       return data;
     },
-    update: async (id: number, customer: CustomerUpdate) => {
+    update: async (id: number | string, customer: CustomerUpdate) => {
       const { data, error } = await (supabase as any)
         .from('customers')
         .update(customer as any)
-        .eq('customer_id', id)
+        .eq('id', id)
         .select()
         .single();
       if (error) throw error;
       return data;
     },
-    delete: async (id: number) => {
+    delete: async (id: number | string) => {
       const { error } = await (supabase as any)
         .from('customers')
         .delete()
-        .eq('customer_id', id);
+        .eq('id', id);
       if (error) throw error;
     }
   },
@@ -455,13 +457,18 @@ export const api = {
       return data;
     },
     getDailyCount: async () => {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      let since = new Date();
+      since.setHours(0, 0, 0, 0);
+
+      const openReg = await api.registers.getOpen();
+      if (openReg && openReg.opened_at) {
+        since = new Date(openReg.opened_at);
+      }
 
       const { count, error } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfDay.toISOString());
+        .gte('created_at', since.toISOString());
 
       if (error) {
         console.error('Error fetching daily order count:', error);
@@ -571,8 +578,13 @@ export const api = {
       return true;
     },
     getOngoing: async () => {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      let since = new Date();
+      since.setHours(0, 0, 0, 0);
+
+      const openReg = await api.registers.getOpen();
+      if (openReg && openReg.opened_at) {
+        since = new Date(openReg.opened_at);
+      }
 
       const { data, error } = await supabase
         .from('orders')
@@ -584,7 +596,7 @@ export const api = {
             products(name, image)
           )
         `)
-        .gte('created_at', startOfDay.toISOString())
+        .gte('created_at', since.toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -593,7 +605,7 @@ export const api = {
         const { data: simpleData, error: simpleError } = await supabase
           .from('orders')
           .select('*')
-          .gte('created_at', startOfDay.toISOString())
+          .gte('created_at', since.toISOString())
           .order('created_at', { ascending: false });
         
         if (simpleError) throw simpleError;

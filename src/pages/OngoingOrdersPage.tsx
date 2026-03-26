@@ -226,6 +226,7 @@ const OngoingOrdersPage = () => {
             name: order.customers.name,
             phone: order.customers.phone || ''
           } : null,
+          customerAddress: (order as any).customer_address,
           subtotal: order.total_amount,
           taxAmount: 0,
           discountAmount: 0,
@@ -353,6 +354,7 @@ const OngoingOrdersPage = () => {
         name: order.customers.name,
         phone: order.customers.phone || ''
       } : null,
+      customerAddress: (order as any).customer_address,
       subtotal: order.total_amount,
       taxAmount: 0,
       discountAmount: 0,

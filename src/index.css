@@ -264,6 +264,18 @@
     }
   }
 
+  /* Off-screen container for print capturing to avoid 'display: none' issues */
+  .print-visible-offscreen {
+    position: absolute !important;
+    left: -9999px !important;
+    top: 0 !important;
+    width: 80mm !important;
+    z-index: -1000 !important;
+    visibility: visible !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
   /* Low stock badge */
   .low-stock-badge {
     @apply absolute top-2 right-2 px-2 py-0.5 text-xs font-medium rounded-full;

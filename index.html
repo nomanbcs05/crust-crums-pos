@@ -11,6 +11,21 @@
     <meta property="og:title" content="Gen XCloud POS" />
     <meta property="og:description" content="Modern Point of Sale System for Coffee Shops" />
     <meta property="og:type" content="website" />
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * data: blob:; style-src * 'unsafe-inline';">
+    <script>
+      // Global Trusted Types bypass for Edge/Chrome - must run before any other scripts
+      if (window.trustedTypes && window.trustedTypes.createPolicy && !window.trustedTypes.defaultPolicy) {
+        try {
+          window.trustedTypes.createPolicy('default', {
+            createHTML: (s) => s,
+            createScript: (s) => s,
+            createScriptURL: (s) => s
+          });
+        } catch (e) {
+          console.error('Trusted Types policy creation failed:', e);
+        }
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">

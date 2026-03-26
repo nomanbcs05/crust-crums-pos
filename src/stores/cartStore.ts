@@ -60,6 +60,7 @@ interface CartState {
   setRider: (rider: { name: string } | null) => void; // Added setRider
   setCustomerAddress: (address: string | null) => void; // Added setCustomerAddress
   setOrderType: (type: 'dine_in' | 'take_away' | 'delivery') => void;
+  setDeliveryFee: (fee: number) => void; // Added setDeliveryFee
   setDiscount: (discount: number, type: 'percentage' | 'fixed') => void;
   clearCart: () => void;
   calculateTotals: () => void;
@@ -105,7 +106,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? subtotal * (state.discount / 100) 
         : state.discount;
       const taxAmount = (subtotal - discountAmount) * (state.taxRate / 100);
-      const deliveryFee = state.orderType === 'delivery' ? 30 : 0;
+      const deliveryFee = state.orderType === 'delivery' ? state.deliveryFee : 0;
       const total = subtotal - discountAmount + taxAmount + deliveryFee;
       
       return { items: newItems, subtotal, discountAmount, taxAmount, deliveryFee, total };
@@ -120,7 +121,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? subtotal * (state.discount / 100) 
         : state.discount;
       const taxAmount = (subtotal - discountAmount) * (state.taxRate / 100);
-      const deliveryFee = state.orderType === 'delivery' ? 30 : 0;
+      const deliveryFee = state.orderType === 'delivery' ? state.deliveryFee : 0;
       const total = subtotal - discountAmount + taxAmount + deliveryFee;
       
       return { items: newItems, subtotal, discountAmount, taxAmount, deliveryFee, total };
@@ -145,7 +146,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? subtotal * (state.discount / 100) 
         : state.discount;
       const taxAmount = (subtotal - discountAmount) * (state.taxRate / 100);
-      const deliveryFee = state.orderType === 'delivery' ? 30 : 0;
+      const deliveryFee = state.orderType === 'delivery' ? state.deliveryFee : 0;
       const total = subtotal - discountAmount + taxAmount + deliveryFee;
       
       return { items: newItems, subtotal, discountAmount, taxAmount, deliveryFee, total };
@@ -159,7 +160,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   setCustomerAddress: (customerAddress) => set({ customerAddress }), // Added setCustomerAddress implementation
   setOrderType: (orderType) => {
     set((state) => {
-      const deliveryFee = orderType === 'delivery' ? 30 : 0;
+      // Default to 30 if switching to delivery and currently 0, otherwise keep existing fee
+      const deliveryFee = orderType === 'delivery' ? (state.deliveryFee > 0 ? state.deliveryFee : 30) : 0;
       const total = state.subtotal - state.discountAmount + state.taxAmount + deliveryFee;
       
       // Clear relevant fields when switching types
@@ -173,6 +175,13 @@ export const useCartStore = create<CartState>((set, get) => ({
       };
     });
   },
+  
+  setDeliveryFee: (deliveryFee) => {
+    set((state) => {
+      const total = state.subtotal - state.discountAmount + state.taxAmount + deliveryFee;
+      return { deliveryFee, total };
+    });
+  },
 
   setDiscount: (discount, type) => {
     set((state) => {
@@ -180,7 +189,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? state.subtotal * (discount / 100) 
         : discount;
       const taxAmount = (state.subtotal - discountAmount) * (state.taxRate / 100);
-      const deliveryFee = state.orderType === 'delivery' ? 30 : 0;
+      const deliveryFee = state.orderType === 'delivery' ? state.deliveryFee : 0;
       const total = state.subtotal - discountAmount + taxAmount + deliveryFee;
       
       return { discount, discountType: type, discountAmount, taxAmount, deliveryFee, total };
@@ -250,7 +259,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? subtotal * (state.discount / 100) 
         : state.discount;
       const taxAmount = (subtotal - discountAmount) * (state.taxRate / 100);
-      const deliveryFee = state.orderType === 'delivery' ? 30 : 0;
+      const deliveryFee = state.orderType === 'delivery' ? state.deliveryFee : 0;
       const total = subtotal - discountAmount + taxAmount + deliveryFee;
       
       return { subtotal, discountAmount, taxAmount, deliveryFee, total };

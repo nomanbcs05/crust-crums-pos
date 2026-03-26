@@ -35,12 +35,12 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
   const city = businessInfo.city;
   const phone = businessInfo.phone;
   const billFooter = '!!!!FOR THE LOVE OF FOOD !!!!';
-  const poweredByFooter = 'Powered By: GENAI TECHNOLOGY.';
+  const poweredByFooter = 'Powered By: GENAI TECHNOLOGY +923342826675';
 
   return (
     <div
       ref={ref}
-      className="receipt-print bg-white text-black p-2 font-mono text-[11px] leading-tight mx-auto"
+      className="receipt-print bg-white text-black p-2 font-mono text-[12px] leading-tight mx-auto"
       style={{ width: '80mm' }}
     >
       {/* Header */}
@@ -49,7 +49,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
           <img
             src={logoSrc}
             alt="Logo"
-            className="mx-auto mb-1 object-contain h-16 max-w-[120px] w-auto"
+            className="mx-auto mb-1 object-contain h-20 max-w-[150px] w-auto"
             onError={() => setLogoError(true)}
           />
         ) : (
@@ -60,7 +60,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
       </div>
 
       {/* Address Box */}
-      <div className="border border-black p-1 text-center mb-1 text-[10px]">
+      <div className="border border-black p-1 text-center mb-1 text-[11px]">
         <p>{address}</p>
         <p>{city}</p>
         {phone && (
@@ -71,22 +71,21 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
             )}
           </>
         )}
-        <p className="text-[9px] mt-1 border-t border-dotted border-black pt-1">
+        <p className="text-[10px] mt-1 border-t border-dotted border-black pt-1">
           Designed & Developed By Genai Tech
         </p>
       </div>
 
       {/* Order Number Box */}
         <div className="border-x border-t border-black p-1 text-center">
-        <div className="text-2xl font-bold">{order.orderNumber}</div>
+        <div className="text-[26px] font-bold">{order.orderNumber}</div>
       </div>
 
       {/* Info Section */}
-      <div className="border border-black p-1 text-[10px]">
+      <div className="border border-black p-1 text-[12px]">
         <div className="flex justify-between">
           <span>Invoice #:</span>
           <span className="font-bold">{order.orderNumber}</span>
-          <span>DAY-00{order.orderNumber}</span>
         </div>
         <div className="flex justify-between mt-1">
           <span>Restaurant:</span>
@@ -121,8 +120,8 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
 
         {order.rider && (
           <div className="flex justify-between items-center mt-1">
-            <span className="font-bold text-lg">Rider :</span>
-            <span className="font-bold text-lg uppercase">{order.rider.name}</span>
+            <span className="font-bold text-[20px]">Rider :</span>
+            <span className="font-bold text-[20px] uppercase">{order.rider.name}</span>
           </div>
         )}
 
@@ -139,9 +138,9 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
               </div>
             )}
             {order.customerAddress && (
-              <div className="flex justify-between mt-0.5">
-                <span className="font-bold">Address:</span>
-                <span className="text-[10px] text-right break-words max-w-[180px] uppercase">
+              <div className="flex flex-col mt-1.5 border-t border-dotted border-black pt-1">
+                <span className="font-bold">Delivery Address:</span>
+                <span className="text-[12px] leading-tight break-words uppercase mt-0.5">
                   {order.customerAddress}
                 </span>
               </div>
@@ -150,9 +149,9 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
         )}
 
         {!order.customer && order.customerAddress && (
-          <div className="flex justify-between mt-1">
-            <span className="font-bold">Address:</span>
-            <span className="text-[10px] text-right break-words max-w-[180px] uppercase">
+          <div className="flex flex-col mt-1 border-t border-dotted border-black pt-1">
+            <span className="font-bold">Delivery Address:</span>
+            <span className="text-[12px] leading-tight break-words uppercase mt-0.5">
               {order.customerAddress}
             </span>
           </div>
@@ -161,7 +160,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
 
       {/* Items Table */}
       <div className="border-x border-b border-black">
-        <table className="w-full table-fixed text-[10px]">
+        <table className="w-full table-fixed text-[12px]">
           <thead>
             <tr className="border-b border-black bg-gray-100">
               <th className="text-left py-1 pl-1 w-8">Qty</th>
@@ -187,7 +186,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
       </div>
 
       {/* Totals */}
-      <div className="border-x border-b border-black p-1 text-[11px]">
+      <div className="border-x border-b border-black p-1 text-[13px]">
         <div className="flex justify-between">
           <span>SubTotal :</span>
           <span className="font-bold">{Number(order.subtotal).toLocaleString()}</span>
@@ -198,7 +197,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
             <span className="font-bold">{Number(order.deliveryFee).toLocaleString()}</span>
           </div>
         )}
-        <div className="flex justify-between font-bold text-base mt-1 bg-gray-100 p-1">
+        <div className="flex justify-between font-bold text-[18px] mt-1 bg-gray-100 p-1">
           <span>Net Bill :</span>
           <span>{Number(order.total).toLocaleString()}</span>
         </div>
@@ -208,7 +207,7 @@ const Bill = forwardRef<HTMLDivElement, BillProps>(({ order }, ref) => {
       </div>
 
       {/* Footer */}
-      <div className="border border-black mt-1 p-2 text-center text-[10px]">
+      <div className="border border-black mt-1 p-2 text-center text-[11px]">
         <p>{billFooter}</p>
         <p className="font-bold mt-1">{poweredByFooter}</p>
       </div>
