@@ -221,7 +221,7 @@ const OngoingOrdersPage = () => {
           body: JSON.stringify(billData)
         }).catch(err => console.error("Local printing failed:", err));
 
-        setShowBill(true);
+        toast.success('Payment successful and bill sent to printer');
         setSelectedOrderId(null);
       }
     },
@@ -350,10 +350,14 @@ const OngoingOrdersPage = () => {
       body: JSON.stringify(billData)
     }).catch(err => console.error("Local printing failed:", err));
 
-    setShowBill(true);
-
     if (riderActionType === 'pay') {
       payOrderMutation.mutate({ orderId: orderRequiringRider.id, paymentMethod: 'cash' });
+    } else {
+      // If just generating bill from runner, mark as completed
+      api.orders.updateStatus(orderRequiringRider.id, 'completed').then(() => {
+        queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+        toast.success('Bill sent and order marked as completed');
+      });
     }
 
     setOrderRequiringRider(null);
@@ -569,7 +573,10 @@ const OngoingOrdersPage = () => {
                                     body: JSON.stringify(billData)
                                   }).catch(err => console.error("Local printing failed:", err));
                                   
-                                  setShowBill(true);
+                                  await api.orders.updateStatus(order.id, 'completed');
+                                  queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+                                  toast.success('Bill sent and order marked as completed');
+                                  setSelectedOrderId(null);
                                 }
                               }}
                             >
@@ -854,7 +861,10 @@ const OngoingOrdersPage = () => {
                               body: JSON.stringify(billData)
                             }).catch(err => console.error("Local printing failed:", err));
 
-                            setShowBill(true);
+                            await api.orders.updateStatus(selectedOrder.id, 'completed');
+                            queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+                            toast.success('Bill sent and order marked as completed');
+                            setSelectedOrderId(null);
                           }
                         }}
                       >

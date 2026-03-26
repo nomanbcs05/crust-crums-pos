@@ -198,7 +198,6 @@ const CartPanel = () => {
         body: JSON.stringify(orderData)
       }).catch(err => console.error("Local printing failed:", err));
 
-      setShowReceipt(true);
       toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
       clearCart();
       navigate('/ongoing-orders');
@@ -299,7 +298,6 @@ const CartPanel = () => {
         body: JSON.stringify(orderData)
       }).catch(err => console.error("Local printing failed:", err));
 
-      setShowKOT(true);
       toast.success('Order sent to kitchen');
       clearCart();
       navigate('/ongoing-orders');
