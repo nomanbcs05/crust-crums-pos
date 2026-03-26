@@ -83,6 +83,16 @@ const OngoingOrdersPage = () => {
   }, [showDetailPanel]);
   const queryClient = useQueryClient();
 
+  const { data: printerIP } = useQuery({
+    queryKey: ['settings', 'printer_server_ip'],
+    queryFn: () => api.settings.get('printer_server_ip'),
+  });
+
+  const getPrinterUrl = (endpoint: string) => {
+    const ip = printerIP || 'localhost';
+    return `http://${ip}:5000${endpoint}`;
+  };
+
   useEffect(() => {
     const init = async () => {
       const cached = (typeof window !== 'undefined' && localStorage.getItem('cashier_display_name')) || '';
@@ -201,51 +211,33 @@ const OngoingOrdersPage = () => {
       // Prepare bill data
       const order = selectedOrder;
       if (order) {
-        const billData = {
-          id: order.id, // Include order ID for auto-save
-          orderNumber: (order as any).dailyId || getDailyIdForOrder(order.id) || order.id.slice(0, 8).toUpperCase(),
-          items: order.order_items?.map((item: any) => {
-            const matched = (products as any[]).find((p: any) =>
-              p.id === item.product_id ||
-              p.name === item.product_name ||
-              (p.price === item.price && (!item.product_category || p.category === item.product_category))
-            );
-            return {
-              product: {
-                id: item.product_id || matched?.id || '',
-                name: item.products?.name || item.product_name || matched?.name || 'Item',
-                price: item.price,
-                image: item.products?.image || matched?.image || '🍽️'
-              },
-              quantity: item.quantity,
-              lineTotal: item.price * item.quantity
-            };
-          }) || [],
-          customer: order.customers ? {
-            id: order.customer_id?.toString() || '',
-            name: order.customers.name,
-            phone: order.customers.phone || ''
-          } : null,
-          customerAddress: (order as any).customer_address,
-          subtotal: order.total_amount,
-          taxAmount: 0,
-          discountAmount: 0,
-          deliveryFee: 0,
-          total: order.total_amount,
-          paymentMethod: 'cash',
-          orderType: order.order_type,
-          createdAt: new Date(order.created_at),
-          cashierName,
-          serverName: (order as any).server_name,
-          tableId: (order as any).restaurant_tables?.table_number
-        };
+        const billData = prepareBillData(order);
         setBillOrder(billData);
+        
+        // Dual Printer Support: Silent Print Bill to Local Server
+        fetch(getPrinterUrl('/print/bill'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(billData)
+        }).catch(err => console.error("Local printing failed:", err));
+
         setShowBill(true);
+        setSelectedOrderId(null);
       }
     },
     onError: (error: any) => {
       toast.error('Failed to process payment: ' + error.message);
     }
+  });
+
+  const handlePrintBill = useReactToPrint({
+    contentRef: billRef,
+    documentTitle: `Bill-${billOrder?.orderNumber || Date.now()}`,
+    onAfterPrint: async () => {
+      toast.success('Bill printed successfully');
+      setShowBill(false);
+      setBillOrder(null);
+    },
   });
 
   // Delete order mutation
@@ -261,31 +253,6 @@ const OngoingOrdersPage = () => {
     }
   });
 
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-    documentTitle: `Bill-${billOrder?.orderNumber || Date.now()}`,
-    onAfterPrint: async () => {
-      toast.success('Bill printed successfully');
-
-      // 1. Close the dialog immediately
-      setShowBill(false);
-
-      // If we have a bill order and it has an ID, update its status to completed
-      if (billOrder?.id) {
-        try {
-          await api.orders.updateStatus(billOrder.id, 'completed');
-          queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-          toast.success('Order marked as completed');
-        } catch (error) {
-          console.error('Failed to update order status after printing:', error);
-          toast.error('Failed to mark order as completed');
-        }
-      }
-
-      // 2. Clear state
-      setBillOrder(null);
-    },
-  });
 
   const handleEditOrder = () => {
     if (selectedOrder) {
@@ -370,11 +337,19 @@ const OngoingOrdersPage = () => {
     };
   };
 
-  const handleRiderSelect = (rider: { id: number; name: string }) => {
+  const handleRiderSelect = async (rider: { id: number; name: string }) => {
     if (!orderRequiringRider) return;
 
     const billData = prepareBillData(orderRequiringRider, rider);
     setBillOrder(billData);
+    
+    // Dual Printer Support: Silent Print Bill to Local Server
+    fetch(getPrinterUrl('/print/bill'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(billData)
+    }).catch(err => console.error("Local printing failed:", err));
+
     setShowBill(true);
 
     if (riderActionType === 'pay') {
@@ -383,15 +358,9 @@ const OngoingOrdersPage = () => {
 
     setOrderRequiringRider(null);
     setShowRiderModal(false);
+    setSelectedOrderId(null);
   };
 
-  useEffect(() => {
-    if (showBill && billOrder) {
-      setTimeout(() => {
-        handlePrintBill();
-      }, 500);
-    }
-  }, [showBill, billOrder]);
 
   const filteredOrders = useMemo(() => {
     // Sort all orders today to calculate consistent daily IDs
@@ -425,10 +394,10 @@ const OngoingOrdersPage = () => {
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(order =>
+      result = result.filter((order: any) =>
         order.id.toLowerCase().includes(query) ||
         (order.dailyId && order.dailyId.includes(query)) ||
-        order.customers?.name?.toLowerCase().includes(query) ||
+        (order as any).customers?.name?.toLowerCase().includes(query) ||
         (order as any).restaurant_tables?.table_number?.toLowerCase().includes(query)
       );
     }
@@ -583,7 +552,7 @@ const OngoingOrdersPage = () => {
                               size="sm"
                               variant="default"
                               className="h-8 px-3 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
                                 if (order.order_type === 'delivery') {
                                   setOrderRequiringRider(order);
@@ -592,6 +561,14 @@ const OngoingOrdersPage = () => {
                                 } else {
                                   const billData = prepareBillData(order);
                                   setBillOrder(billData);
+                                  
+                                  // Dual Printer Support: Silent Print Bill to Local Server
+                                  fetch(getPrinterUrl('/print/bill'), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(billData)
+                                  }).catch(err => console.error("Local printing failed:", err));
+                                  
                                   setShowBill(true);
                                 }
                               }}
@@ -860,7 +837,7 @@ const OngoingOrdersPage = () => {
                       </div>
                       <Button
                         className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg shadow-lg shadow-blue-200 rounded-xl"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
                           if (selectedOrder.order_type === 'delivery') {
                             setOrderRequiringRider(selectedOrder);
@@ -869,6 +846,14 @@ const OngoingOrdersPage = () => {
                           } else {
                             const billData = prepareBillData(selectedOrder);
                             setBillOrder(billData);
+                            
+                            // Dual Printer Support: Silent Print Bill to Local Server
+                            fetch(getPrinterUrl('/print/bill'), {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(billData)
+                            }).catch(err => console.error("Local printing failed:", err));
+
                             setShowBill(true);
                           }
                         }}

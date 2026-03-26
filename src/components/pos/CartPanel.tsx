@@ -12,16 +12,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { useCartStore, Customer } from '@/stores/cartStore';
-import Receipt from './Receipt';
-import KOT from './KOT';
-import Bill from './Bill';
 import RiderSelectionModal from './RiderSelectionModal';
-import { useReactToPrint } from 'react-to-print';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { api } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useReactToPrint } from 'react-to-print';
+import Receipt from './Receipt';
+import Bill from './Bill';
+import KOT from './KOT';
 
 import TableSelectionModal from './TableSelectionModal';
 
@@ -58,24 +58,41 @@ const CartPanel = () => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'wallet'>('cash');
   const [discountInput, setDiscountInput] = useState('');
   const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [showKOT, setShowKOT] = useState(false);
-  const [showBill, setShowBill] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
   const [showRiderModal, setShowRiderModal] = useState(false);
   const [pendingAfterRider, setPendingAfterRider] = useState<'none' | 'bill' | 'complete'>('none');
-  const [lastOrder, setLastOrder] = useState<any>(null);
   const [cashierName, setCashierName] = useState('Anas');
   const [orderIsDone, setOrderIsDone] = useState(!!editingOrderId);
-    // Auto-enable Bill/Complete Sale if editing an order
-    useEffect(() => {
-      if (editingOrderId) {
-        setOrderIsDone(true);
-      }
-    }, [editingOrderId]);
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [showKOT, setShowKOT] = useState(false);
+  const [showBill, setShowBill] = useState(false);
+
   const receiptRef = useRef<HTMLDivElement>(null);
   const kotRef = useRef<HTMLDivElement>(null);
   const billRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: `Receipt-${lastOrder?.orderNumber || Date.now()}`,
+  });
+
+  const handlePrintKOT = useReactToPrint({
+    contentRef: kotRef,
+    documentTitle: `KOT-${lastOrder?.orderNumber || Date.now()}`,
+  });
+
+  const handlePrintBill = useReactToPrint({
+    contentRef: billRef,
+    documentTitle: `Bill-${lastOrder?.orderNumber || Date.now()}`,
+  });
+
+  // Auto-enable Bill/Complete Sale if editing an order
+  useEffect(() => {
+    if (editingOrderId) {
+      setOrderIsDone(true);
+    }
+  }, [editingOrderId]);
 
   const queryClient = useQueryClient();
 
@@ -145,6 +162,16 @@ const CartPanel = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  const { data: printerIP } = useQuery({
+    queryKey: ['settings', 'printer_server_ip'],
+    queryFn: () => api.settings.get('printer_server_ip'),
+  });
+
+  const getPrinterUrl = (endpoint: string) => {
+    const ip = printerIP || 'localhost';
+    return `http://${ip}:5000${endpoint}`;
+  };
+
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
       if (editingOrderId) {
@@ -152,117 +179,48 @@ const CartPanel = () => {
       }
       return api.orders.create(orderData.order, orderData.items);
     },
-    onSuccess: (newOrder) => {
+    onSuccess: async (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
 
-      // If it was an update, newOrder might just be 'true' or the updated order
-      // We need to handle both cases for setLastOrder
+      const orderData = await prepareOrderData();
       if (editingOrderId) {
-        setLastOrder((prev: any) => ({ ...prev, id: editingOrderId }));
+        orderData.id = editingOrderId;
       } else if (newOrder && typeof newOrder === 'object') {
-        setLastOrder((prev: any) => ({ ...prev, id: newOrder.id }));
+        orderData.id = (newOrder as any).id;
       }
+      setLastOrder(orderData);
+
+      // Dual Printer Support: Silent Print Bill to Local Server
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      }).catch(err => console.error("Local printing failed:", err));
 
       setShowReceipt(true);
-
-      // Small delay to allow dialog to open, then print
-      setTimeout(() => {
-        handlePrint();
-        // Fallback close in case onAfterPrint doesn't fire (some browsers)
-        setTimeout(() => setShowReceipt(false), 2000);
-        toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
-      }, 300);
+      toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
+      clearCart();
+      navigate('/ongoing-orders');
     },
     onError: (error: any) => {
       console.error('Order creation failed:', error);
-      // Supabase errors are objects with a message property, not necessarily Error instances
       const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
-      console.error('Detailed error message:', errorMessage);
       toast.error(`Failed to save order: ${errorMessage}`);
     }
-  });
-
-  const handlePrint = useReactToPrint({
-    contentRef: receiptRef,
-    documentTitle: `Receipt-${lastOrder?.orderNumber}`,
-    onAfterPrint: () => {
-      toast.success('Receipt printed successfully');
-      setShowReceipt(false);
-      clearCart();
-      navigate('/ongoing-orders');
-    },
-  });
-
-  const handlePrintKOT = useReactToPrint({
-    contentRef: kotRef,
-    documentTitle: `KOT-${Date.now()}`,
-    onAfterPrint: () => {
-      toast.success('KOT printed successfully');
-      setShowKOT(false);
-      clearCart();
-      navigate('/ongoing-orders');
-    },
-  });
-
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-    documentTitle: `Bill-${lastOrder?.orderNumber || Date.now()}`,
-    onAfterPrint: async () => {
-      toast.success('Bill printed successfully');
-
-      // 1. Close the dialog immediately
-      setShowBill(false);
-
-      if (lastOrder) {
-        try {
-          const orderInsert = {
-            customer_id: customer?.id ? parseInt(customer.id) : null,
-            total_amount: total,
-            status: 'completed',
-            payment_method: paymentMethod,
-            order_type: orderType,
-            table_id: tableId || null,
-            server_name: getServerNameWithRole(),
-            customer_address: customerAddress || null,
-          };
-
-          const orderItemsInsert = items.map(item => ({
-            product_id: item.product.id ? String(item.product.id) : null,
-            product_name: item.product.name,
-            product_category: item.product.category,
-            quantity: item.quantity,
-            price: item.product.price
-          }));
-
-          const toastId = toast.loading('Saving order after bill print...');
-
-          if (editingOrderId) {
-            await api.orders.update(editingOrderId, orderInsert, orderItemsInsert);
-          } else {
-            await api.orders.create(orderInsert, orderItemsInsert);
-          }
-
-          queryClient.invalidateQueries({ queryKey: ['orders'] });
-          queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-
-          toast.dismiss(toastId);
-          toast.success('Order saved as completed');
-
-          // 2. Clear cart and reset state
-          clearCart();
-          setLastOrder(null);
-        } catch (error) {
-          console.error('Failed to auto-save order after bill print:', error);
-          toast.error('Failed to save order');
-        }
-      }
-    },
   });
 
   const performShowBill = async () => {
     const orderData = await prepareOrderData();
     setLastOrder(orderData);
+    
+    // Dual Printer Support: Silent Print Bill to Local Server
+    fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+    }).catch(err => console.error("Local printing failed:", err));
+    
     setShowBill(true);
   };
 
@@ -330,15 +288,21 @@ const CartPanel = () => {
       if (editingOrderId) {
         orderData.id = editingOrderId;
       } else if (newOrder && typeof newOrder === 'object') {
-        orderData.id = newOrder.id;
+        orderData.id = (newOrder as any).id;
       }
       setLastOrder(orderData);
-      setShowKOT(true);
 
-      // Print KOT after a short delay to allow dialog render
-      setTimeout(() => {
-        handlePrintKOT();
-      }, 500);
+      // Dual Printer Support: Silent Print KOT to Local Server
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      }).catch(err => console.error("Local printing failed:", err));
+
+      setShowKOT(true);
+      toast.success('Order sent to kitchen');
+      clearCart();
+      navigate('/ongoing-orders');
     },
     onError: (error: any) => {
       console.error('Order creation failed:', error);
@@ -739,6 +703,24 @@ const CartPanel = () => {
       </div>
       )}
 
+      <RiderSelectionModal
+        open={showRiderModal}
+        onOpenChange={setShowRiderModal}
+        onSelect={(rider) => {
+          setRider(rider);
+          setShowRiderModal(false);
+        }}
+      />
+
+      <TableSelectionModal
+        open={showTableModal}
+        onOpenChange={setShowTableModal}
+        onSelect={(id) => {
+          setTableId(id);
+          setShowTableModal(false);
+        }}
+      />
+
       {/* Receipt Dialog */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
         <DialogContent className="max-w-md" aria-describedby="receipt-description">
@@ -813,14 +795,6 @@ const CartPanel = () => {
           </div>
         </DialogContent>
       </Dialog>
-      <RiderSelectionModal
-        isOpen={showRiderModal}
-        onClose={() => setShowRiderModal(false)}
-      />
-      <TableSelectionModal
-        isOpen={showTableModal}
-        onClose={() => setShowTableModal(false)}
-      />
     </div>
   );
 };
@@ -841,7 +815,7 @@ const CustomerSelector = ({ selectedCustomer, onSelect, customers }: CustomerSel
   }), [customers]);
 
   const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return customers.slice(0, 50); // Show first 50 by default
+    if (!searchQuery.trim()) return customers.slice(0, 50);
     return fuse.search(searchQuery).slice(0, 50).map(r => r.item);
   }, [searchQuery, fuse, customers]);
 
