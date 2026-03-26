@@ -38,6 +38,9 @@ const DailySummary = forwardRef<HTMLDivElement, DailySummaryProps>(({ orders, da
         <h1 className="text-sm font-bold uppercase tracking-tight">Daily Sales Summary</h1>
         <h2 className="text-xs font-bold uppercase">{businessInfo.name}</h2>
         <p className="font-bold mt-1">{format(date, 'EEEE, dd MMMM yyyy')}</p>
+        <p className="text-[9px] mt-1 border-t border-dotted border-black pt-1">
+          Designed & Developed By Genai Tech
+        </p>
       </div>
 
       <div className="border-t border-black my-2" />
@@ -101,7 +104,7 @@ const DailySummary = forwardRef<HTMLDivElement, DailySummaryProps>(({ orders, da
       <div className="text-center mt-4 border-t border-dotted border-black pt-2 text-[9px] uppercase">
         <p className="font-bold">GEN XCLOUD POS - DAILY REPORT</p>
         <p>{format(new Date(), 'dd-MMM HH:mm:ss')}</p>
-        <p className="mt-1 font-bold">Genai Nawabshah contact 923342826675</p>
+        <p className="mt-1 font-bold">Powered By: GENAI TECHNOLOGY +923342826675</p>
       </div>
 
       <div className="text-center mt-4">
