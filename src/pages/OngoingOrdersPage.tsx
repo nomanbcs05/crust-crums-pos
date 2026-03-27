@@ -212,16 +212,24 @@ const OngoingOrdersPage = () => {
       const order = selectedOrder;
       if (order) {
         const billData = prepareBillData(order);
-        setBillOrder(billData);
+    setBillOrder(billData);
+    
+    // Get HTML from the ref after a short delay to ensure rendering
+    setTimeout(() => {
+        const htmlContent = billRef.current?.innerHTML || '';
         
         // Dual Printer Support: Silent Print Bill to Local Server
         fetch(getPrinterUrl('/print/bill'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(billData)
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...billData,
+                html: htmlContent
+            })
         }).catch(err => console.error("Local printing failed:", err));
+    }, 100);
 
-        toast.success('Payment successful and bill sent to printer');
+    toast.success('Payment successful and bill sent to printer');
         setSelectedOrderId(null);
       }
     },
@@ -343,12 +351,20 @@ const OngoingOrdersPage = () => {
     const billData = prepareBillData(orderRequiringRider, rider);
     setBillOrder(billData);
     
-    // Dual Printer Support: Silent Print Bill to Local Server
-    fetch(getPrinterUrl('/print/bill'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(billData)
-    }).catch(err => console.error("Local printing failed:", err));
+    // Get HTML from the ref after a short delay to ensure rendering
+    setTimeout(() => {
+        const htmlContent = billRef.current?.innerHTML || '';
+        
+        // Dual Printer Support: Silent Print Bill to Local Server
+        fetch(getPrinterUrl('/print/bill'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...billData,
+                html: htmlContent
+            })
+        }).catch(err => console.error("Local printing failed:", err));
+    }, 100);
 
     if (riderActionType === 'pay') {
       payOrderMutation.mutate({ orderId: orderRequiringRider.id, paymentMethod: 'cash' });
@@ -566,12 +582,20 @@ const OngoingOrdersPage = () => {
                                   const billData = prepareBillData(order);
                                   setBillOrder(billData);
                                   
-                                  // Dual Printer Support: Silent Print Bill to Local Server
-                                  fetch(getPrinterUrl('/print/bill'), {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(billData)
-                                  }).catch(err => console.error("Local printing failed:", err));
+                                  // Get HTML from the ref after a short delay to ensure rendering
+                                  setTimeout(() => {
+                                      const htmlContent = billRef.current?.innerHTML || '';
+                                      
+                                      // Dual Printer Support: Silent Print Bill to Local Server
+                                      fetch(getPrinterUrl('/print/bill'), {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                              ...billData,
+                                              html: htmlContent
+                                          })
+                                      }).catch(err => console.error("Local printing failed:", err));
+                                  }, 100);
                                   
                                   await api.orders.updateStatus(order.id, 'completed');
                                   queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
@@ -854,12 +878,20 @@ const OngoingOrdersPage = () => {
                             const billData = prepareBillData(selectedOrder);
                             setBillOrder(billData);
                             
-                            // Dual Printer Support: Silent Print Bill to Local Server
-                            fetch(getPrinterUrl('/print/bill'), {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify(billData)
-                            }).catch(err => console.error("Local printing failed:", err));
+                            // Get HTML from the ref after a short delay to ensure rendering
+                            setTimeout(() => {
+                                const htmlContent = billRef.current?.innerHTML || '';
+                                
+                                // Dual Printer Support: Silent Print Bill to Local Server
+                                fetch(getPrinterUrl('/print/bill'), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        ...billData,
+                                        html: htmlContent
+                                    })
+                                }).catch(err => console.error("Local printing failed:", err));
+                            }, 100);
 
                             await api.orders.updateStatus(selectedOrder.id, 'completed');
                             queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });

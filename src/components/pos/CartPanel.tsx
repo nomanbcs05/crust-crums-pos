@@ -75,6 +75,18 @@ const CartPanel = () => {
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
     documentTitle: `Receipt-${lastOrder?.orderNumber || Date.now()}`,
+    onAfterPrint: () => {
+      // Also send to local printer if HTML is available
+      const htmlContent = receiptRef.current?.innerHTML || '';
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...lastOrder,
+          html: htmlContent
+        })
+      }).catch(err => console.error("Local printing failed:", err));
+    }
   });
 
   const handlePrintKOT = useReactToPrint({
@@ -307,12 +319,20 @@ const CartPanel = () => {
       }
       setLastOrder(orderData);
 
-      // Dual Printer Support: Silent Print KOT to Local Server
-      fetch(getPrinterUrl('/print/kot'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      }).catch(err => console.error("Local printing failed:", err));
+      // Get HTML from the ref after a short delay to ensure rendering
+      setTimeout(() => {
+          const htmlContent = kotRef.current?.innerHTML || '';
+          
+          // Dual Printer Support: Silent Print KOT to Local Server
+          fetch(getPrinterUrl('/print/kot'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  ...orderData,
+                  html: htmlContent
+              })
+          }).catch(err => console.error("Local printing failed:", err));
+      }, 100);
 
       toast.success('Order sent to kitchen');
       clearCart();
