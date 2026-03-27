@@ -1,9 +1,21 @@
 const escpos = require('escpos');
 const Network = require('escpos-network');
+const puppeteer = require('puppeteer-core');
+const { launcher } = require('chromium-edge-launcher');
+const Jimp = require('jimp');
 require('dotenv').config();
 
 const KOT_IP = process.env.KOT_PRINTER_IP;
 const BILL_IP = process.env.BILL_PRINTER_IP;
+
+// Utility to get Edge path
+const getEdgePath = () => {
+    try {
+        return launcher.getInstallations()[0];
+    } catch (e) {
+        return 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+    }
+};
 
 const printKOT = async (order) => {
     return new Promise((resolve, reject) => {
@@ -62,7 +74,81 @@ const printKOT = async (order) => {
     });
 };
 
-const printBill = async (order) => {
+const printBillAsImage = async (htmlContent) => {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            executablePath: getEdgePath(),
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        
+        await page.setViewport({ width: 576, height: 1000 });
+        
+        const styledHtml = `
+            <html>
+                <head>
+                    <style>
+                        body { 
+                            width: 576px; 
+                            margin: 0; 
+                            padding: 0; 
+                            background: white;
+                            font-family: monospace;
+                        }
+                        * { box-sizing: border-box; }
+                    </style>
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+            </html>
+        `;
+
+        await page.setContent(styledHtml, { waitUntil: 'networkidle0' });
+        const height = await page.evaluate(() => document.body.scrollHeight);
+        await page.setViewport({ width: 576, height: Math.ceil(height) });
+
+        const imageBuffer = await page.screenshot({ fullPage: true });
+        await browser.close();
+
+        return new Promise((resolve, reject) => {
+            if (!BILL_IP) return reject("Bill Printer IP not configured");
+
+            const device = new Network(BILL_IP);
+            const printer = new escpos.Printer(device);
+
+            device.open(async (error) => {
+                if (error) return reject(error);
+
+                try {
+                    const escposImage = await new Promise((res, rej) => {
+                        escpos.Image.load(imageBuffer, 'image/png', (img) => {
+                            if (img instanceof Error) rej(img);
+                            else res(img);
+                        });
+                    });
+
+                    printer
+                        .align('ct')
+                        .image(escposImage)
+                        .feed(3)
+                        .cut()
+                        .close();
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+    } catch (err) {
+        if (browser) await browser.close();
+        throw err;
+    }
+};
+
+const printBillFallback = async (order) => {
     return new Promise((resolve, reject) => {
         if (!BILL_IP) return reject("Bill Printer IP not configured");
 
@@ -135,6 +221,27 @@ const printBill = async (order) => {
             reject(err);
         }
     });
+};
+
+const printBill = async (order) => {
+    try {
+        if (order.html) {
+            console.log('Printing Bill as Image...');
+            await printBillAsImage(order.html);
+        } else {
+            console.log('No HTML provided, using Text Fallback...');
+            await printBillFallback(order);
+        }
+    } catch (error) {
+        console.error('Bill Print Error:', error);
+        try {
+            console.log('Image print failed, attempting text fallback...');
+            await printBillFallback(order);
+        } catch (fallbackError) {
+            console.error('Fallback failed:', fallbackError);
+            throw fallbackError;
+        }
+    }
 };
 
 module.exports = { printKOT, printBill };
