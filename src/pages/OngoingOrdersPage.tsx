@@ -243,6 +243,26 @@ const OngoingOrdersPage = () => {
     documentTitle: `Bill-${billOrder?.orderNumber || Date.now()}`,
     onAfterPrint: async () => {
       toast.success('Bill printed successfully');
+
+      // Send to local printer
+      const htmlContent = billRef.current?.innerHTML || '';
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...billOrder,
+          html: htmlContent
+        })
+      }).catch(err => console.error("Local printing failed:", err));
+
+      // Mark order as completed
+      if (billOrder?.id) {
+        await api.orders.updateStatus(billOrder.id, 'completed');
+        queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+        toast.success('Order marked as completed');
+        setSelectedOrderId(null);
+      }
+
       setShowBill(false);
       setBillOrder(null);
     },
@@ -350,35 +370,14 @@ const OngoingOrdersPage = () => {
 
     const billData = prepareBillData(orderRequiringRider, rider);
     setBillOrder(billData);
-    
-    // Get HTML from the ref after a short delay to ensure rendering
-    setTimeout(() => {
-        const htmlContent = billRef.current?.innerHTML || '';
-        
-        // Dual Printer Support: Silent Print Bill to Local Server
-        fetch(getPrinterUrl('/print/bill'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...billData,
-                html: htmlContent
-            })
-        }).catch(err => console.error("Local printing failed:", err));
-    }, 100);
+    setShowBill(true);
 
     if (riderActionType === 'pay') {
       payOrderMutation.mutate({ orderId: orderRequiringRider.id, paymentMethod: 'cash' });
-    } else {
-      // If just generating bill from runner, mark as completed
-      api.orders.updateStatus(orderRequiringRider.id, 'completed').then(() => {
-        queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-        toast.success('Bill sent and order marked as completed');
-      });
     }
 
     setOrderRequiringRider(null);
     setShowRiderModal(false);
-    setSelectedOrderId(null);
   };
 
 
@@ -581,26 +580,7 @@ const OngoingOrdersPage = () => {
                                 } else {
                                   const billData = prepareBillData(order);
                                   setBillOrder(billData);
-                                  
-                                  // Get HTML from the ref after a short delay to ensure rendering
-                                  setTimeout(() => {
-                                      const htmlContent = billRef.current?.innerHTML || '';
-                                      
-                                      // Dual Printer Support: Silent Print Bill to Local Server
-                                      fetch(getPrinterUrl('/print/bill'), {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({
-                                              ...billData,
-                                              html: htmlContent
-                                          })
-                                      }).catch(err => console.error("Local printing failed:", err));
-                                  }, 100);
-                                  
-                                  await api.orders.updateStatus(order.id, 'completed');
-                                  queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-                                  toast.success('Bill sent and order marked as completed');
-                                  setSelectedOrderId(null);
+                                  setShowBill(true);
                                 }
                               }}
                             >
@@ -877,26 +857,7 @@ const OngoingOrdersPage = () => {
                           } else {
                             const billData = prepareBillData(selectedOrder);
                             setBillOrder(billData);
-                            
-                            // Get HTML from the ref after a short delay to ensure rendering
-                            setTimeout(() => {
-                                const htmlContent = billRef.current?.innerHTML || '';
-                                
-                                // Dual Printer Support: Silent Print Bill to Local Server
-                                fetch(getPrinterUrl('/print/bill'), {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        ...billData,
-                                        html: htmlContent
-                                    })
-                                }).catch(err => console.error("Local printing failed:", err));
-                            }, 100);
-
-                            await api.orders.updateStatus(selectedOrder.id, 'completed');
-                            queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-                            toast.success('Bill sent and order marked as completed');
-                            setSelectedOrderId(null);
+                            setShowBill(true);
                           }
                         }}
                       >

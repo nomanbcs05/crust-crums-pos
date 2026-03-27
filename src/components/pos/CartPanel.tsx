@@ -202,25 +202,11 @@ const CartPanel = () => {
         orderData.id = (newOrder as any).id;
       }
       setLastOrder(orderData);
-
-      // Get HTML from the ref after a short delay to ensure rendering
-      setTimeout(() => {
-          const htmlContent = billRef.current?.innerHTML || '';
-          
-          // Dual Printer Support: Silent Print Bill to Local Server
-          fetch(getPrinterUrl('/print/bill'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  ...orderData,
-                  html: htmlContent
-              })
-          }).catch(err => console.error("Local printing failed:", err));
-      }, 100);
-
+      
+      // No longer silent printing here - just show the receipt preview
+      setShowReceipt(true);
       toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
       clearCart();
-      navigate('/ongoing-orders');
     },
     onError: (error: any) => {
       console.error('Order creation failed:', error);
@@ -232,22 +218,6 @@ const CartPanel = () => {
   const performShowBill = async () => {
     const orderData = await prepareOrderData();
     setLastOrder(orderData);
-    
-    // Get HTML from the ref after a short delay to ensure rendering
-    setTimeout(() => {
-        const htmlContent = billRef.current?.innerHTML || '';
-        
-        // Dual Printer Support: Silent Print Bill to Local Server
-        fetch(getPrinterUrl('/print/bill'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...orderData,
-                html: htmlContent
-            })
-        }).catch(err => console.error("Local printing failed:", err));
-    }, 100);
-    
     setShowBill(true);
   };
 
@@ -318,25 +288,11 @@ const CartPanel = () => {
         orderData.id = (newOrder as any).id;
       }
       setLastOrder(orderData);
-
-      // Get HTML from the ref after a short delay to ensure rendering
-      setTimeout(() => {
-          const htmlContent = kotRef.current?.innerHTML || '';
-          
-          // Dual Printer Support: Silent Print KOT to Local Server
-          fetch(getPrinterUrl('/print/kot'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  ...orderData,
-                  html: htmlContent
-              })
-          }).catch(err => console.error("Local printing failed:", err));
-      }, 100);
-
+      
+      // No longer silent printing here - just show the KOT preview
+      setShowKOT(true);
       toast.success('Order sent to kitchen');
       clearCart();
-      navigate('/ongoing-orders');
     },
     onError: (error: any) => {
       console.error('Order creation failed:', error);
@@ -773,10 +729,24 @@ const CartPanel = () => {
             </Button>
             <Button className="flex-1" onClick={() => {
               handlePrint();
-              setTimeout(() => setShowReceipt(false), 2000);
+              // Send to local printer
+              const htmlContent = receiptRef.current?.innerHTML || '';
+              fetch(getPrinterUrl('/print/bill'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...lastOrder,
+                  html: htmlContent
+                })
+              }).catch(err => console.error("Local printing failed:", err));
+              
+              setTimeout(() => {
+                setShowReceipt(false);
+                navigate('/ongoing-orders');
+              }, 2000);
             }}>
               <Printer className="h-4 w-4 mr-2" />
-              Print Again
+              Print Receipt
             </Button>
           </div>
         </DialogContent>
@@ -798,7 +768,24 @@ const CartPanel = () => {
             <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
               Close
             </Button>
-            <Button className="flex-1" onClick={() => handlePrintKOT()}>
+            <Button className="flex-1" onClick={() => {
+              handlePrintKOT();
+              // Send to local printer
+              const htmlContent = kotRef.current?.innerHTML || '';
+              fetch(getPrinterUrl('/print/kot'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...lastOrder,
+                  html: htmlContent
+                })
+              }).catch(err => console.error("Local printing failed:", err));
+              
+              setTimeout(() => {
+                setShowKOT(false);
+                navigate('/ongoing-orders');
+              }, 2000);
+            }}>
               <Printer className="h-4 w-4 mr-2" />
               Print KOT
             </Button>
@@ -822,7 +809,23 @@ const CartPanel = () => {
             <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
               Close
             </Button>
-            <Button className="flex-1" onClick={() => handlePrintBill()}>
+            <Button className="flex-1" onClick={() => {
+              handlePrintBill();
+              // Send to local printer
+              const htmlContent = billRef.current?.innerHTML || '';
+              fetch(getPrinterUrl('/print/bill'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...lastOrder,
+                  html: htmlContent
+                })
+              }).catch(err => console.error("Local printing failed:", err));
+              
+              setTimeout(() => {
+                setShowBill(false);
+              }, 2000);
+            }}>
               <Printer className="h-4 w-4 mr-2" />
               Print Bill
             </Button>

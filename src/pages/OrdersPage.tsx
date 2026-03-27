@@ -177,6 +177,17 @@ const OrdersPage = () => {
     contentRef: receiptRef,
     documentTitle: `Receipt-${printingOrder?.dailyId || printingOrder?.id?.slice(0, 8)}`,
     onAfterPrint: () => {
+      // Send to local printer
+      const htmlContent = receiptRef.current?.innerHTML || '';
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...printingOrder,
+          html: htmlContent
+        })
+      }).catch(err => console.error("Local printing failed:", err));
+
       setPrintingOrder(null);
       toast.success('Receipt printed successfully');
     },
@@ -186,6 +197,17 @@ const OrdersPage = () => {
     contentRef: kotRef,
     documentTitle: `KOT-Duplicate-${printingKOTOrder?.dailyId || printingKOTOrder?.id?.slice(0, 8)}`,
     onAfterPrint: () => {
+      // Send to local printer
+      const htmlContent = kotRef.current?.innerHTML || '';
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...printingKOTOrder,
+          html: htmlContent
+        })
+      }).catch(err => console.error("Local printing failed:", err));
+
       setPrintingKOTOrder(null);
       toast.success('Duplicate KOT printed successfully');
     },
@@ -197,7 +219,7 @@ const OrdersPage = () => {
     onAfterPrint: async () => {
       toast.success('Bill printed successfully');
 
-      // Also send to local printer if HTML is available
+      // Send to local printer
       const htmlContent = billRef.current?.innerHTML || '';
       fetch(getPrinterUrl('/print/bill'), {
         method: 'POST',
@@ -280,17 +302,6 @@ const OrdersPage = () => {
       // Wait for state update then print
       setTimeout(() => {
         handlePrintIndividual();
-        
-        // Also send to local printer if HTML is available
-        const htmlContent = receiptRef.current?.innerHTML || '';
-        fetch(getPrinterUrl('/print/bill'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formattedOrder,
-            html: htmlContent
-          })
-        }).catch(err => console.error("Local printing failed:", err));
       }, 100);
     } catch (err) {
       console.error('Error printing order:', err);
@@ -329,17 +340,6 @@ const OrdersPage = () => {
       // Wait for state update then print
       setTimeout(() => {
         handlePrintKOT();
-
-        // Also send to local printer if HTML is available
-        const htmlContent = kotRef.current?.innerHTML || '';
-        fetch(getPrinterUrl('/print/kot'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formattedOrder,
-            html: htmlContent
-          })
-        }).catch(err => console.error("Local printing failed:", err));
       }, 100);
     } catch (err) {
       console.error('Error printing duplicate KOT:', err);
