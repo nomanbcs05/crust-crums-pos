@@ -25,6 +25,7 @@ import KOT from './KOT';
 
 import TableSelectionModal from './TableSelectionModal';
 
+// POS Application - Styled Printing v1.1
 const CartPanel = () => {
   const navigate = useNavigate();
   const {
