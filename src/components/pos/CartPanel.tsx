@@ -191,12 +191,20 @@ const CartPanel = () => {
       }
       setLastOrder(orderData);
 
-      // Dual Printer Support: Silent Print Bill to Local Server
-      fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      }).catch(err => console.error("Local printing failed:", err));
+      // Get HTML from the ref after a short delay to ensure rendering
+      setTimeout(() => {
+          const htmlContent = billRef.current?.innerHTML || '';
+          
+          // Dual Printer Support: Silent Print Bill to Local Server
+          fetch(getPrinterUrl('/print/bill'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  ...orderData,
+                  html: htmlContent
+              })
+          }).catch(err => console.error("Local printing failed:", err));
+      }, 100);
 
       toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
       clearCart();
@@ -213,12 +221,20 @@ const CartPanel = () => {
     const orderData = await prepareOrderData();
     setLastOrder(orderData);
     
-    // Dual Printer Support: Silent Print Bill to Local Server
-    fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-    }).catch(err => console.error("Local printing failed:", err));
+    // Get HTML from the ref after a short delay to ensure rendering
+    setTimeout(() => {
+        const htmlContent = billRef.current?.innerHTML || '';
+        
+        // Dual Printer Support: Silent Print Bill to Local Server
+        fetch(getPrinterUrl('/print/bill'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...orderData,
+                html: htmlContent
+            })
+        }).catch(err => console.error("Local printing failed:", err));
+    }, 100);
     
     setShowBill(true);
   };

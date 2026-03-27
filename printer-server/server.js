@@ -2,14 +2,28 @@ const express = require('express');
 const escpos = require('escpos');
 const Network = require('escpos-network');
 const cors = require('cors');
+const puppeteer = require('puppeteer-core');
+const { launcher } = require('chromium-edge-launcher');
+const Jimp = require('jimp');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const KOT_IP = process.env.KOT_PRINTER_IP;
 const BILL_IP = process.env.BILL_PRINTER_IP;
+
+// Utility to get Edge path
+const getEdgePath = () => {
+    try {
+        return launcher.getInstallations()[0];
+    } catch (e) {
+        return 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+    }
+};
 
 const printKOT = async (order) => {
     return new Promise((resolve, reject) => {
@@ -68,7 +82,90 @@ const printKOT = async (order) => {
     });
 };
 
-const printBill = async (order) => {
+const printBillAsImage = async (htmlContent) => {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            executablePath: getEdgePath(),
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        
+        // Set viewport for 80mm printer (approx 302px width at 96dpi, but we use higher for quality)
+        // 576px is a common width for 80mm thermal printers
+        await page.setViewport({ width: 576, height: 1000 });
+        
+        // Add basic styling to ensure thermal look
+        const styledHtml = `
+            <html>
+                <head>
+                    <style>
+                        body { 
+                            width: 576px; 
+                            margin: 0; 
+                            padding: 0; 
+                            background: white;
+                            font-family: monospace;
+                        }
+                        * { box-sizing: border-box; }
+                    </style>
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+            </html>
+        `;
+
+        await page.setContent(styledHtml, { waitUntil: 'networkidle0' });
+        
+        // Auto-size height based on content
+        const height = await page.evaluate(() => document.body.scrollHeight);
+        await page.setViewport({ width: 576, height: Math.ceil(height) });
+
+        const imageBuffer = await page.screenshot({ fullPage: true });
+        await browser.close();
+
+        // Use Jimp to convert buffer to something escpos can handle if needed
+        const image = await Jimp.read(imageBuffer);
+        const pngBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
+
+        return new Promise((resolve, reject) => {
+            if (!BILL_IP) return reject("Bill Printer IP not configured");
+
+            const device = new Network(BILL_IP);
+            const printer = new escpos.Printer(device);
+
+            device.open(async (error) => {
+                if (error) return reject(error);
+
+                try {
+                    const escposImage = await new Promise((res, rej) => {
+                        escpos.Image.load(imageBuffer, 'image/png', (img) => {
+                            if (img instanceof Error) rej(img);
+                            else res(img);
+                        });
+                    });
+
+                    printer
+                        .align('ct')
+                        .image(escposImage)
+                        .feed(3)
+                        .cut()
+                        .close();
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+    } catch (err) {
+        if (browser) await browser.close();
+        throw err;
+    }
+};
+
+const printBillFallback = async (order) => {
     return new Promise((resolve, reject) => {
         if (!BILL_IP) return reject("Bill Printer IP not configured");
 
@@ -150,18 +247,32 @@ app.post('/print/kot', async (req, res) => {
         res.status(200).send({ success: true, message: 'KOT printed' });
     } catch (error) {
         console.error('KOT Error:', error);
-        res.status(200).send({ success: false, error: error.toString() }); // Always send 200 to avoid frontend crash if printer offline
+        res.status(200).send({ success: false, error: error.toString() });
     }
 });
 
 app.post('/print/bill', async (req, res) => {
     console.log('Bill Print Request:', req.body.orderNumber);
     try {
-        await printBill(req.body);
+        if (req.body.html) {
+            console.log('Printing Bill as Image...');
+            await printBillAsImage(req.body.html);
+        } else {
+            console.log('No HTML provided, using Text Fallback...');
+            await printBillFallback(req.body);
+        }
         res.status(200).send({ success: true, message: 'Bill printed' });
     } catch (error) {
-        console.error('Bill Error:', error);
-        res.status(200).send({ success: false, error: error.toString() });
+        console.error('Bill Print Error:', error);
+        // Fallback to text if image fails
+        try {
+            console.log('Image print failed, attempting text fallback...');
+            await printBillFallback(req.body);
+            res.status(200).send({ success: true, message: 'Bill printed with fallback' });
+        } catch (fallbackError) {
+            console.error('Fallback failed:', fallbackError);
+            res.status(200).send({ success: false, error: fallbackError.toString() });
+        }
     }
 });
 
