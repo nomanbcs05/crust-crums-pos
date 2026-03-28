@@ -829,7 +829,6 @@ const OrdersPage = () => {
                 Close
               </Button>
               <Button className="flex-1" onClick={() => {
-                // ONLY send to local printer to avoid browser print dialog
                 const htmlContent = billRef.current?.innerHTML || '';
                 fetch(getPrinterUrl('/print/bill'), {
                   method: 'POST',
@@ -840,7 +839,6 @@ const OrdersPage = () => {
                   })
                 }).catch(err => console.error("Local printing failed:", err));
 
-                // Mark order as completed if it wasn't already
                 if (billOrder?.id) {
                   api.orders.updateStatus(billOrder.id, 'completed').then(() => {
                     queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -858,88 +856,86 @@ const OrdersPage = () => {
             </div>
           </DialogContent>
         </Dialog>
- 
-+         {/* Receipt Dialog */}
-+         <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-+           <DialogContent className="max-w-md">
-+             <DialogHeader>
-+               <DialogTitle>Receipt Preview</DialogTitle>
-+               <DialogDescription className="sr-only">Order Receipt</DialogDescription>
-+             </DialogHeader>
-+             {printingOrder && (
-+               <div className="max-h-[70vh] overflow-auto">
-+                 <Receipt ref={receiptRef} order={printingOrder} />
-+               </div>
-+             )}
-+             <div className="flex gap-2 mt-4">
-+               <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
-+                 Close
-+               </Button>
-+               <Button className="flex-1" onClick={() => {
-+                 // ONLY send to local printer to avoid browser print dialog
-+                 const htmlContent = receiptRef.current?.innerHTML || '';
-+                 fetch(getPrinterUrl('/print/bill'), {
-+                   method: 'POST',
-+                   headers: { 'Content-Type': 'application/json' },
-+                   body: JSON.stringify({
-+                     ...printingOrder,
-+                     html: htmlContent
-+                   })
-+                 }).catch(err => console.error("Local printing failed:", err));
-+                 
-+                 toast.success('Printing receipt...');
-+                 setTimeout(() => {
-+                   setShowReceipt(false);
-+                   setPrintingOrder(null);
-+                 }, 1000);
-+               }}>
-+                 <Printer className="h-4 w-4 mr-2" />
-+                 Print Receipt
-+               </Button>
-+             </div>
-+           </DialogContent>
-+         </Dialog>
-+
-+         {/* KOT Dialog */}
-+         <Dialog open={showKOT} onOpenChange={setShowKOT}>
-+           <DialogContent className="max-w-md">
-+             <DialogHeader>
-+               <DialogTitle>KOT Preview</DialogTitle>
-+               <DialogDescription className="sr-only">Kitchen Order Ticket</DialogDescription>
-+             </DialogHeader>
-+             {printingKOTOrder && (
-+               <div className="max-h-[70vh] overflow-auto">
-+                 <KOT ref={kotRef} order={printingKOTOrder} isDuplicate={true} />
-+               </div>
-+             )}
-+             <div className="flex gap-2 mt-4">
-+               <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
-+                 Close
-+               </Button>
-+               <Button className="flex-1" onClick={() => {
-+                 // ONLY send to local printer to avoid browser print dialog
-+                 const htmlContent = kotRef.current?.innerHTML || '';
-+                 fetch(getPrinterUrl('/print/kot'), {
-+                   method: 'POST',
-+                   headers: { 'Content-Type': 'application/json' },
-+                   body: JSON.stringify({
-+                     ...printingKOTOrder,
-+                     html: htmlContent
-+                   })
-+                 }).catch(err => console.error("Local printing failed:", err));
-+                 
-+                 toast.success('Printing KOT...');
-+                 setTimeout(() => {
-+                   setShowKOT(false);
-+                   setPrintingKOTOrder(null);
-+                 }, 1000);
-+               }}>
-+                 <Printer className="h-4 w-4 mr-2" />
-+                 Print KOT
-+               </Button>
-+             </div>
-+           </DialogContent>
-+         </Dialog>
+
+        {/* Receipt Dialog */}
+        <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Receipt Preview</DialogTitle>
+              <DialogDescription className="sr-only">Order Receipt</DialogDescription>
+            </DialogHeader>
+            {printingOrder && (
+              <div className="max-h-[70vh] overflow-auto">
+                <Receipt ref={receiptRef} order={printingOrder} />
+              </div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
+                Close
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                const htmlContent = receiptRef.current?.innerHTML || '';
+                fetch(getPrinterUrl('/print/bill'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...printingOrder,
+                    html: htmlContent
+                  })
+                }).catch(err => console.error("Local printing failed:", err));
+                
+                toast.success('Printing receipt...');
+                setTimeout(() => {
+                  setShowReceipt(false);
+                  setPrintingOrder(null);
+                }, 1000);
+              }}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print Receipt
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* KOT Dialog */}
+        <Dialog open={showKOT} onOpenChange={setShowKOT}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>KOT Preview</DialogTitle>
+              <DialogDescription className="sr-only">Kitchen Order Ticket</DialogDescription>
+            </DialogHeader>
+            {printingKOTOrder && (
+              <div className="max-h-[70vh] overflow-auto">
+                <KOT ref={kotRef} order={printingKOTOrder} isDuplicate={true} />
+              </div>
+            )}
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
+                Close
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                const htmlContent = kotRef.current?.innerHTML || '';
+                fetch(getPrinterUrl('/print/kot'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...printingKOTOrder,
+                    html: htmlContent
+                  })
+                }).catch(err => console.error("Local printing failed:", err));
+                
+                toast.success('Printing KOT...');
+                setTimeout(() => {
+                  setShowKOT(false);
+                  setPrintingKOTOrder(null);
+                }, 1000);
+              }}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print KOT
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 +
           {/* Order Details Modal */}
           <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
