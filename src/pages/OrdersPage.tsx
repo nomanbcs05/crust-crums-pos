@@ -104,6 +104,9 @@ const OrdersPage = () => {
     return `http://${ip}:5000${endpoint}`;
   };
 
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [showKOT, setShowKOT] = useState(false);
+
   const handlePrintSummary = useReactToPrint({
     contentRef: summaryRef,
     documentTitle: `Daily-Summary-${format(new Date(), 'yyyy-MM-dd')}`,
@@ -299,10 +302,7 @@ const OrdersPage = () => {
       };
 
       setPrintingOrder(formattedOrder);
-      // Wait for state update then print
-      setTimeout(() => {
-        handlePrintIndividual();
-      }, 100);
+      setShowReceipt(true);
     } catch (err) {
       console.error('Error printing order:', err);
       toast.error('Failed to load order details for printing');
@@ -337,10 +337,7 @@ const OrdersPage = () => {
       };
 
       setPrintingKOTOrder(formattedOrder);
-      // Wait for state update then print
-      setTimeout(() => {
-        handlePrintKOT();
-      }, 100);
+      setShowKOT(true);
     } catch (err) {
       console.error('Error printing duplicate KOT:', err);
       toast.error('Failed to load order details for KOT printing');
@@ -814,16 +811,138 @@ const OrdersPage = () => {
               isDuplicate={true}
             />
           )}
-          {billOrder && (
-            <Bill
-              ref={billRef}
-              order={billOrder}
-            />
-          )}
         </div>
 
-        {/* Order Details Modal */}
-        <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+        <Dialog open={showBill} onOpenChange={setShowBill}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Bill Preview</DialogTitle>
+              <DialogDescription className="sr-only">Bill for historical order</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[80vh] overflow-auto">
+              {billOrder && (
+                <Bill ref={billRef} order={billOrder} />
+              )}
+            </div>
+            <div className="flex gap-3 mt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
+                Close
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                // ONLY send to local printer to avoid browser print dialog
+                const htmlContent = billRef.current?.innerHTML || '';
+                fetch(getPrinterUrl('/print/bill'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...billOrder,
+                    html: htmlContent
+                  })
+                }).catch(err => console.error("Local printing failed:", err));
+
+                // Mark order as completed if it wasn't already
+                if (billOrder?.id) {
+                  api.orders.updateStatus(billOrder.id, 'completed').then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['orders'] });
+                  });
+                }
+
+                toast.success('Printing bill...');
+                setTimeout(() => {
+                  setShowBill(false);
+                  setBillOrder(null);
+                }, 1000);
+              }}>
+                Print Bill
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+ 
++         {/* Receipt Dialog */}
++         <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
++           <DialogContent className="max-w-md">
++             <DialogHeader>
++               <DialogTitle>Receipt Preview</DialogTitle>
++               <DialogDescription className="sr-only">Order Receipt</DialogDescription>
++             </DialogHeader>
++             {printingOrder && (
++               <div className="max-h-[70vh] overflow-auto">
++                 <Receipt ref={receiptRef} order={printingOrder} />
++               </div>
++             )}
++             <div className="flex gap-2 mt-4">
++               <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
++                 Close
++               </Button>
++               <Button className="flex-1" onClick={() => {
++                 // ONLY send to local printer to avoid browser print dialog
++                 const htmlContent = receiptRef.current?.innerHTML || '';
++                 fetch(getPrinterUrl('/print/bill'), {
++                   method: 'POST',
++                   headers: { 'Content-Type': 'application/json' },
++                   body: JSON.stringify({
++                     ...printingOrder,
++                     html: htmlContent
++                   })
++                 }).catch(err => console.error("Local printing failed:", err));
++                 
++                 toast.success('Printing receipt...');
++                 setTimeout(() => {
++                   setShowReceipt(false);
++                   setPrintingOrder(null);
++                 }, 1000);
++               }}>
++                 <Printer className="h-4 w-4 mr-2" />
++                 Print Receipt
++               </Button>
++             </div>
++           </DialogContent>
++         </Dialog>
++
++         {/* KOT Dialog */}
++         <Dialog open={showKOT} onOpenChange={setShowKOT}>
++           <DialogContent className="max-w-md">
++             <DialogHeader>
++               <DialogTitle>KOT Preview</DialogTitle>
++               <DialogDescription className="sr-only">Kitchen Order Ticket</DialogDescription>
++             </DialogHeader>
++             {printingKOTOrder && (
++               <div className="max-h-[70vh] overflow-auto">
++                 <KOT ref={kotRef} order={printingKOTOrder} isDuplicate={true} />
++               </div>
++             )}
++             <div className="flex gap-2 mt-4">
++               <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
++                 Close
++               </Button>
++               <Button className="flex-1" onClick={() => {
++                 // ONLY send to local printer to avoid browser print dialog
++                 const htmlContent = kotRef.current?.innerHTML || '';
++                 fetch(getPrinterUrl('/print/kot'), {
++                   method: 'POST',
++                   headers: { 'Content-Type': 'application/json' },
++                   body: JSON.stringify({
++                     ...printingKOTOrder,
++                     html: htmlContent
++                   })
++                 }).catch(err => console.error("Local printing failed:", err));
++                 
++                 toast.success('Printing KOT...');
++                 setTimeout(() => {
++                   setShowKOT(false);
++                   setPrintingKOTOrder(null);
++                 }, 1000);
++               }}>
++                 <Printer className="h-4 w-4 mr-2" />
++                 Print KOT
++               </Button>
++             </div>
++           </DialogContent>
++         </Dialog>
++
+          {/* Order Details Modal */}
+          <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
           <DialogContent className="max-w-md overflow-hidden p-0 bg-white">
             <DialogHeader className="pt-4 px-4 pb-2">
               <DialogTitle className="flex justify-between items-center text-lg">

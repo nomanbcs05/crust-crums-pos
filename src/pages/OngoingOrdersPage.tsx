@@ -925,7 +925,33 @@ const OngoingOrdersPage = () => {
             <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
               Close
             </Button>
-            <Button className="flex-1" onClick={() => handlePrintBill()}>
+            <Button className="flex-1" onClick={() => {
+              // ONLY send to local printer to avoid browser print dialog
+              const htmlContent = billRef.current?.innerHTML || '';
+              fetch(getPrinterUrl('/print/bill'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...billOrder,
+                  html: htmlContent
+                })
+              }).catch(err => console.error("Local printing failed:", err));
+
+              // Mark order as completed
+              if (billOrder?.id) {
+                api.orders.updateStatus(billOrder.id, 'completed').then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+                  toast.success('Order marked as completed');
+                  setSelectedOrderId(null);
+                });
+              }
+
+              toast.success('Printing bill...');
+              setTimeout(() => {
+                setShowBill(false);
+                setBillOrder(null);
+              }, 1000);
+            }}>
               Print Bill
             </Button>
           </div>

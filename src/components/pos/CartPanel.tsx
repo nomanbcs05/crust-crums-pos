@@ -729,8 +729,7 @@ const CartPanel = () => {
               Close
             </Button>
             <Button className="flex-1" onClick={() => {
-              handlePrint();
-              // Send to local printer
+              // ONLY send to local printer to avoid browser print dialog
               const htmlContent = receiptRef.current?.innerHTML || '';
               fetch(getPrinterUrl('/print/bill'), {
                 method: 'POST',
@@ -741,10 +740,11 @@ const CartPanel = () => {
                 })
               }).catch(err => console.error("Local printing failed:", err));
               
+              toast.success('Printing receipt...');
               setTimeout(() => {
                 setShowReceipt(false);
                 navigate('/ongoing-orders');
-              }, 2000);
+              }, 1000);
             }}>
               <Printer className="h-4 w-4 mr-2" />
               Print Receipt
@@ -770,8 +770,7 @@ const CartPanel = () => {
               Close
             </Button>
             <Button className="flex-1" onClick={() => {
-              handlePrintKOT();
-              // Send to local printer
+              // ONLY send to local printer to avoid browser print dialog
               const htmlContent = kotRef.current?.innerHTML || '';
               fetch(getPrinterUrl('/print/kot'), {
                 method: 'POST',
@@ -782,10 +781,11 @@ const CartPanel = () => {
                 })
               }).catch(err => console.error("Local printing failed:", err));
               
+              toast.success('Printing KOT...');
               setTimeout(() => {
                 setShowKOT(false);
                 navigate('/ongoing-orders');
-              }, 2000);
+              }, 1000);
             }}>
               <Printer className="h-4 w-4 mr-2" />
               Print KOT
@@ -811,8 +811,7 @@ const CartPanel = () => {
               Close
             </Button>
             <Button className="flex-1" onClick={() => {
-              handlePrintBill();
-              // Send to local printer
+              // ONLY send to local printer to avoid browser print dialog
               const htmlContent = billRef.current?.innerHTML || '';
               fetch(getPrinterUrl('/print/bill'), {
                 method: 'POST',
@@ -823,9 +822,10 @@ const CartPanel = () => {
                 })
               }).catch(err => console.error("Local printing failed:", err));
               
+              toast.success('Printing bill...');
               setTimeout(() => {
                 setShowBill(false);
-              }, 2000);
+              }, 1000);
             }}>
               <Printer className="h-4 w-4 mr-2" />
               Print Bill
