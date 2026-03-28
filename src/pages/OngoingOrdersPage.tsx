@@ -240,7 +240,7 @@ const OngoingOrdersPage = () => {
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
-    documentTitle: `Bill-${billOrder?.orderNumber || Date.now()}`,
+    documentTitle: "",
     onAfterPrint: async () => {
       toast.success('Bill printed successfully');
 

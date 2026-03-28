@@ -75,7 +75,7 @@ const CartPanel = () => {
 
   const handlePrint = useReactToPrint({
     contentRef: receiptRef,
-    documentTitle: `Receipt-${lastOrder?.orderNumber || Date.now()}`,
+    documentTitle: "",
     onAfterPrint: () => {
       // Also send to local printer if HTML is available
       const htmlContent = receiptRef.current?.innerHTML || '';
@@ -92,12 +92,12 @@ const CartPanel = () => {
 
   const handlePrintKOT = useReactToPrint({
     contentRef: kotRef,
-    documentTitle: `KOT-${lastOrder?.orderNumber || Date.now()}`,
+    documentTitle: "",
   });
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
-    documentTitle: `Bill-${lastOrder?.orderNumber || Date.now()}`,
+    documentTitle: "",
   });
 
   // Auto-enable Bill/Complete Sale if editing an order

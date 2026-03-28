@@ -10,8 +10,12 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-const KOT_IP = process.env.KOT_PRINTER_IP;
-const BILL_IP = process.env.BILL_PRINTER_IP;
+const KOT_IP = process.env.KOT_PRINTER_IP || '192.168.100.150';
+const BILL_IP = process.env.BILL_PRINTER_IP || '192.168.100.151';
+
+console.log('Printer Configuration:');
+console.log(' - KOT Printer IP:', KOT_IP);
+console.log(' - Bill Printer IP:', BILL_IP);
 
 const getEdgePath = () => {
     try {

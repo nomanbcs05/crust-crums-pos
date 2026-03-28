@@ -175,7 +175,7 @@ const OrdersPage = () => {
 
   const handlePrintIndividual = useReactToPrint({
     contentRef: receiptRef,
-    documentTitle: `Receipt-${printingOrder?.dailyId || printingOrder?.id?.slice(0, 8)}`,
+    documentTitle: "",
     onAfterPrint: () => {
       // Send to local printer
       const htmlContent = receiptRef.current?.innerHTML || '';
@@ -195,7 +195,7 @@ const OrdersPage = () => {
 
   const handlePrintKOT = useReactToPrint({
     contentRef: kotRef,
-    documentTitle: `KOT-Duplicate-${printingKOTOrder?.dailyId || printingKOTOrder?.id?.slice(0, 8)}`,
+    documentTitle: "",
     onAfterPrint: () => {
       // Send to local printer
       const htmlContent = kotRef.current?.innerHTML || '';
@@ -215,7 +215,7 @@ const OrdersPage = () => {
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
-    documentTitle: `Bill-${billOrder?.orderNumber || Date.now()}`,
+    documentTitle: "",
     onAfterPrint: async () => {
       toast.success('Bill printed successfully');
 
