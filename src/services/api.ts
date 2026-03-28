@@ -487,6 +487,7 @@ export const api = {
         payment_method: order.payment_method || 'cash',
         order_type: order.order_type || 'dine_in',
         server_name: order.server_name || null,
+        rider_name: order.rider?.name || null,
         customer_address: order.customer_address || null,
         created_at: new Date().toISOString()
       };
@@ -544,6 +545,7 @@ export const api = {
         payment_method: order.payment_method || 'cash',
         order_type: order.order_type || 'dine_in',
         server_name: order.server_name || null,
+        rider_name: order.rider?.name || null,
         customer_address: order.customer_address || null,
         created_at: new Date().toISOString()
       };
@@ -621,6 +623,16 @@ export const api = {
         .select()
         .single();
 
+      if (error) throw error;
+      return data;
+    },
+    getByRange: async (fromIso: string, toIso: string) => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, customers(name, phone)')
+        .gte('created_at', fromIso)
+        .lte('created_at', toIso)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },

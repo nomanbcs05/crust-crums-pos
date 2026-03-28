@@ -25,21 +25,51 @@ const RiderDepositsPage = () => {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const { data: deposits = [], isLoading } = useQuery({
+  const { data: deposits = [], isLoading: isLoadingDeposits } = useQuery({
     queryKey: ['rider-deposits', rangeFrom.toISOString(), rangeTo.toISOString()],
     queryFn: () => api.riderDeposits.getRange(rangeFrom.toISOString(), rangeTo.toISOString()),
   });
 
-  const totalByRider = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const d of deposits) {
-      const key = d.rider_name || 'Unknown';
-      map.set(key, (map.get(key) || 0) + Number(d.amount || 0));
-    }
-    return Array.from(map.entries()).map(([r, t]) => ({ rider: r, total: t }));
-  }, [deposits]);
+  const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['orders-range', rangeFrom.toISOString(), rangeTo.toISOString()],
+    queryFn: () => api.orders.getByRange(rangeFrom.toISOString(), rangeTo.toISOString()),
+  });
 
-  const totalAll = useMemo(() => totalByRider.reduce((s, r) => s + r.total, 0), [totalByRider]);
+  const riderStats = useMemo(() => {
+    const stats = new Map<string, { rider: string; deposits: number; deliveries: number; collected: number }>();
+    
+    // Initialize stats for all known riders
+    RIDERS.forEach(r => stats.set(r, { rider: r, deposits: 0, deliveries: 0, collected: 0 }));
+
+    // Calculate deposits
+    deposits.forEach(d => {
+      const key = d.rider_name || 'Unknown';
+      if (!stats.has(key)) stats.set(key, { rider: key, deposits: 0, deliveries: 0, collected: 0 });
+      const current = stats.get(key)!;
+      current.deposits += Number(d.amount || 0);
+    });
+
+    // Calculate deliveries from orders
+    orders.forEach(o => {
+      if (o.order_type === 'delivery' && o.rider_name) {
+        const key = o.rider_name;
+        if (!stats.has(key)) stats.set(key, { rider: key, deposits: 0, deliveries: 0, collected: 0 });
+        const current = stats.get(key)!;
+        current.deliveries += 1;
+        current.collected += Number(o.total_amount || 0);
+      }
+    });
+
+    return Array.from(stats.values()).filter(s => s.deposits > 0 || s.deliveries > 0);
+  }, [deposits, orders]);
+
+  const totalAll = useMemo(() => {
+    return riderStats.reduce((acc, s) => ({
+      deposits: acc.deposits + s.deposits,
+      deliveries: acc.deliveries + s.deliveries,
+      collected: acc.collected + s.collected
+    }), { deposits: 0, deliveries: 0, collected: 0 });
+  }, [riderStats]);
 
   const createMutation = useMutation({
     mutationFn: () => api.riderDeposits.create({ rider_name: rider, amount: Number(amount), notes, received_at: date.toISOString() }),
@@ -139,7 +169,7 @@ const RiderDepositsPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? null : deposits.map((d: any) => (
+                    {isLoadingDeposits ? null : deposits.map((d: any) => (
                       <TableRow key={d.id}>
                         <TableCell>{format(new Date(d.received_at), 'dd-MMM HH:mm')}</TableCell>
                         <TableCell>{d.rider_name}</TableCell>
@@ -151,25 +181,36 @@ const RiderDepositsPage = () => {
               </div>
             </div>
             <div>
-              <h3 className="font-bold mb-2">Summary</h3>
+              <h3 className="font-bold mb-2">Rider Summary</h3>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Rider</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-center">Deliv.</TableHead>
+                      <TableHead className="text-right">Collected</TableHead>
+                      <TableHead className="text-right">Deposited</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {totalByRider.map(r => (
-                      <TableRow key={r.rider}>
-                        <TableCell>{r.rider}</TableCell>
-                        <TableCell className="text-right">Rs {r.total.toLocaleString()}</TableCell>
+                    {riderStats.map(s => (
+                      <TableRow key={s.rider}>
+                        <TableCell className="font-medium uppercase">{s.rider}</TableCell>
+                        <TableCell className="text-center">{s.deliveries}</TableCell>
+                        <TableCell className="text-right">Rs {s.collected.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-green-600">Rs {s.deposits.toLocaleString()}</TableCell>
+                        <TableCell className={`text-right font-bold ${s.collected - s.deposits > 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                          Rs {(s.collected - s.deposits).toLocaleString()}
+                        </TableCell>
                       </TableRow>
                     ))}
-                    <TableRow>
-                      <TableCell className="font-bold">Grand Total</TableCell>
-                      <TableCell className="text-right font-bold">Rs {totalAll.toLocaleString()}</TableCell>
+                    <TableRow className="bg-slate-50 font-bold">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-center">{totalAll.deliveries}</TableCell>
+                      <TableCell className="text-right">Rs {totalAll.collected.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">Rs {totalAll.deposits.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">Rs {(totalAll.collected - totalAll.deposits).toLocaleString()}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -177,6 +218,43 @@ const RiderDepositsPage = () => {
             </div>
           </div>
 
+          <div className="print-visible-offscreen">
+            <div ref={printRef} className="receipt-print p-4 font-mono text-[11px] bg-white text-black" style={{ width: '80mm' }}>
+              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Summary & Deposits</div>
+              <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
+              
+              <div className="space-y-1 mb-4">
+                <div className="grid grid-cols-5 font-bold border-b border-dotted border-black pb-1 text-[9px]">
+                  <span className="col-span-1 text-left">RIDER</span>
+                  <span className="col-span-1 text-center">DLV</span>
+                  <span className="col-span-1 text-right">COLL</span>
+                  <span className="col-span-1 text-right">DEP</span>
+                  <span className="col-span-1 text-right">BAL</span>
+                </div>
+                {riderStats.map(s => (
+                  <div key={s.rider} className="grid grid-cols-5 py-1 border-b border-dotted border-gray-200 text-[10px]">
+                    <span className="col-span-1 uppercase truncate">{s.rider}</span>
+                    <span className="col-span-1 text-center">{s.deliveries}</span>
+                    <span className="col-span-1 text-right">{s.collected.toLocaleString()}</span>
+                    <span className="col-span-1 text-right text-green-700">{s.deposits.toLocaleString()}</span>
+                    <span className="col-span-1 text-right font-bold">{(s.collected - s.deposits).toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="grid grid-cols-5 font-bold border-t border-black mt-2 pt-2 text-[11px]">
+                  <span className="col-span-1">TOTAL</span>
+                  <span className="col-span-1 text-center">{totalAll.deliveries}</span>
+                  <span className="col-span-1 text-right">{totalAll.collected.toLocaleString()}</span>
+                  <span className="col-span-1 text-right">{totalAll.deposits.toLocaleString()}</span>
+                  <span className="col-span-1 text-right">{(totalAll.collected - totalAll.deposits).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="text-center text-[9px] mt-4 pt-2 border-t border-dotted border-black">
+                <p>Printed on: {format(new Date(), 'dd-MMM-yy HH:mm')}</p>
+                <p className="font-bold mt-1">Designed & Developed By Genai Tech</p>
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -184,29 +262,38 @@ const RiderDepositsPage = () => {
       <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Rider Deposits Summary</DialogTitle>
-            <DialogDescription className="sr-only">Preview of rider deposits for thermal printing</DialogDescription>
+            <DialogTitle>Rider Summary Preview</DialogTitle>
+            <DialogDescription className="sr-only">Preview of rider deliveries and deposits</DialogDescription>
           </DialogHeader>
           
           <div className="max-h-[60vh] overflow-auto flex justify-center bg-slate-100 p-4 rounded-lg">
             <div ref={printRef} className="receipt-print p-4 font-mono text-[11px] bg-white text-black shadow-sm" style={{ width: '80mm' }}>
-              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Deposits Summary</div>
+              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Summary & Deposits</div>
               <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
               
               <div className="space-y-1 mb-4">
-                <div className="flex justify-between font-bold border-b border-dotted border-black pb-1">
-                  <span>RIDER</span>
-                  <span>TOTAL AMOUNT</span>
+                <div className="grid grid-cols-5 font-bold border-b border-dotted border-black pb-1 text-[9px]">
+                  <span className="col-span-1 text-left">RIDER</span>
+                  <span className="col-span-1 text-center">DLV</span>
+                  <span className="col-span-1 text-right">COLL</span>
+                  <span className="col-span-1 text-right">DEP</span>
+                  <span className="col-span-1 text-right">BAL</span>
                 </div>
-                {totalByRider.map(r => (
-                  <div key={r.rider} className="flex justify-between py-0.5">
-                    <span className="uppercase">{r.rider}</span>
-                    <span className="font-bold">Rs {r.total.toLocaleString()}</span>
+                {riderStats.map(s => (
+                  <div key={s.rider} className="grid grid-cols-5 py-1 border-b border-dotted border-gray-200 text-[10px]">
+                    <span className="col-span-1 uppercase truncate">{s.rider}</span>
+                    <span className="col-span-1 text-center">{s.deliveries}</span>
+                    <span className="col-span-1 text-right">{s.collected.toLocaleString()}</span>
+                    <span className="col-span-1 text-right text-green-700">{s.deposits.toLocaleString()}</span>
+                    <span className="col-span-1 text-right font-bold">{(s.collected - s.deposits).toLocaleString()}</span>
                   </div>
                 ))}
-                <div className="flex justify-between font-bold border-t border-black mt-2 pt-2 text-[13px]">
-                  <span>GRAND TOTAL</span>
-                  <span>Rs {totalAll.toLocaleString()}</span>
+                <div className="grid grid-cols-5 font-bold border-t border-black mt-2 pt-2 text-[11px]">
+                  <span className="col-span-1">TOTAL</span>
+                  <span className="col-span-1 text-center">{totalAll.deliveries}</span>
+                  <span className="col-span-1 text-right">{totalAll.collected.toLocaleString()}</span>
+                  <span className="col-span-1 text-right">{totalAll.deposits.toLocaleString()}</span>
+                  <span className="col-span-1 text-right">{(totalAll.collected - totalAll.deposits).toLocaleString()}</span>
                 </div>
               </div>
 
