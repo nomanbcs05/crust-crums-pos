@@ -84,7 +84,10 @@ const LoginPage = () => {
 
       toast.success(`Welcome back!`);
 
-      if (role === "cashier") {
+      // For cashiers and specifically 'hashir', we want to show the start day modal if needed
+      // However, MainLayout will catch this upon navigation to "/", so we can just navigate.
+      // But to be immediate, we can show it here if it's a cashier role.
+      if (role === "cashier" || role === "cashier2") {
         setShowStartSessionModal(true);
       } else {
         navigate("/");
@@ -194,6 +197,7 @@ const LoginPage = () => {
       <StartDayModal
         isOpen={showStartSessionModal}
         onSuccess={handleStartSessionSuccess}
+        forceNewSession={false} // Only start day if not already open
       />
     </div>
   );

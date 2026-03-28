@@ -78,12 +78,11 @@ const StartDayModal = ({ isOpen, onSuccess, onClose, forceNewSession = false }: 
     }
 
     const startAmount = parseFloat(amount);
-    if (isNaN(startAmount) || amount.trim() === '') {
-      setAmountError('Amount is required');
-      toast.error('Please enter a valid amount');
+    if (isNaN(startAmount) || amount.trim() === '' || startAmount <= 0) {
+      setAmountError('Starting amount must be greater than zero');
+      toast.error('Please enter a valid starting amount');
       return;
     }
-    // Allow zero as valid amount
     setAmountError('');
     startDayMutation.mutate({ amount: startAmount, date });
   };

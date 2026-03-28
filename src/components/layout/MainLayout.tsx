@@ -32,15 +32,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   useEffect(() => {
     const role = (typeof window !== 'undefined' && localStorage.getItem('active_role')) || '';
-    const today = new Date().toISOString().slice(0, 10);
-    const startDayShownKey = `start_day_shown_${today}`;
-    // Show StartDayModal on every login of the day for cashier2 and hashirr roles if no open register
-    if (!isLoading && openRegister === null && (role === 'cashier2' || role === 'hashirr')) {
-      if (!sessionStorage.getItem(startDayShownKey)) {
-        setForceStartSession(false);
-        setShowStartDayModal(true);
-        sessionStorage.setItem(startDayShownKey, 'true');
-      }
+    const username = (typeof window !== 'undefined' && localStorage.getItem('pos_local_user')) || '';
+    
+    // Strictly show StartDayModal for cashier and hashir roles if no open register
+    // This is mandatory and unclosable until an amount is entered.
+    const isCashier = role === 'cashier' || role === 'cashier2';
+    const isHashir = username.trim().toLowerCase() === 'hashir';
+
+    if (!isLoading && openRegister === null && (isCashier || isHashir)) {
+      setForceStartSession(true);
+      setShowStartDayModal(true);
     } else {
       setForceStartSession(false);
       setShowStartDayModal(false);
