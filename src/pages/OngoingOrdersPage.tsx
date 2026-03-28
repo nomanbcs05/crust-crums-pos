@@ -202,8 +202,8 @@ const OngoingOrdersPage = () => {
 
   // Pay order mutation
   const payOrderMutation = useMutation({
-    mutationFn: async ({ orderId, paymentMethod }: { orderId: string; paymentMethod: string }) => {
-      return api.orders.updateStatus(orderId, 'completed');
+    mutationFn: async ({ orderId, paymentMethod, riderName }: { orderId: string; paymentMethod: string; riderName?: string }) => {
+      return api.orders.updateStatus(orderId, 'completed', riderName);
     },
     onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
@@ -373,7 +373,17 @@ const OngoingOrdersPage = () => {
     setShowBill(true);
 
     if (riderActionType === 'pay') {
-      payOrderMutation.mutate({ orderId: orderRequiringRider.id, paymentMethod: 'cash' });
+      payOrderMutation.mutate({ 
+        orderId: orderRequiringRider.id, 
+        paymentMethod: 'cash',
+        riderName: rider.name
+      });
+    } else {
+      // If just generating bill from runner, mark as completed and save rider
+      api.orders.updateStatus(orderRequiringRider.id, 'completed', rider.name).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
+        toast.success('Bill sent and order marked as completed');
+      });
     }
 
     setOrderRequiringRider(null);

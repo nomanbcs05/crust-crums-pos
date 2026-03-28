@@ -140,6 +140,23 @@ export const api = {
         .single();
       if (error) throw error;
       return data;
+    },
+    clearRange: async (fromIso: string, toIso: string) => {
+      const { error } = await (supabase as any)
+        .from('rider_deposits')
+        .delete()
+        .gte('received_at', fromIso)
+        .lte('received_at', toIso);
+      if (error) throw error;
+      return true;
+    },
+    clearAll: async () => {
+      const { error } = await (supabase as any)
+        .from('rider_deposits')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      return true;
     }
   },
   settings: {
@@ -615,10 +632,15 @@ export const api = {
       }
       return data;
     },
-    updateStatus: async (id: string, status: string) => {
+    updateStatus: async (id: string, status: string, riderName?: string | null) => {
+      const updateData: any = { status };
+      if (riderName !== undefined) {
+        updateData.rider_name = riderName;
+      }
+      
       const { data, error } = await supabase
         .from('orders')
-        .update({ status })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

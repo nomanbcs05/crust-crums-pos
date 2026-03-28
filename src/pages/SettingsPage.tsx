@@ -1,4 +1,4 @@
-import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload } from 'lucide-react';
+import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload, Users, Plus, Trash2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,13 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
 
 const SettingsPage = () => {
+  const queryClient = useQueryClient();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -35,18 +36,99 @@ const SettingsPage = () => {
   const [ordersPwdRequired, setOrdersPwdRequired] = useState((localStorage.getItem('orders_pwd_required') || 'true') === 'true');
   const [ordersActionPwd, setOrdersActionPwd] = useState(localStorage.getItem('orders_action_pwd') || '');
 
+  // Staff management state
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState('rider');
+
+  const { data: staffListStr } = useQuery({
+    queryKey: ['settings', 'staff_list'],
+    queryFn: () => api.settings.get('staff_list'),
+  });
+
+  const staffList = (staffListStr ? JSON.parse(staffListStr) : []) as { name: string, role: string }[];
+
+  const updateStaffMutation = useMutation({
+    mutationFn: (newList: any[]) => api.settings.set('staff_list', JSON.stringify(newList)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'staff_list'] });
+      toast.success('Staff list updated');
+    }
+  });
+
+  const handleAddStaff = () => {
+    if (!newStaffName) return;
+    const newList = [...staffList, { name: newStaffName, role: newStaffRole }];
+    updateStaffMutation.mutate(newList);
+    setNewStaffName('');
+  };
+
+  const handleRemoveStaff = (index: number) => {
+    const newList = staffList.filter((_, i) => i !== index);
+    updateStaffMutation.mutate(newList);
+  };
+
   useEffect(() => {
-    const loadDisplayName = async () => {
+    const loadSettings = async () => {
       try {
-        const v = await api.settings.get('cashier_display_name');
-        if (v && typeof v === 'string') {
-          setCashierDisplayName(v);
-          localStorage.setItem('cashier_display_name', v);
+        const keys = [
+          'business_name', 'phone', 'address', 'city', 'tax_id', 
+          'website', 'email', 'logo_url', 'receipt_footer', 'bill_footer',
+          'printer_server_ip', 'cashier_display_name', 'cashier2_lock',
+          'orders_pwd_required', 'orders_action_pwd'
+        ];
+        
+        for (const key of keys) {
+          const v = await api.settings.get(key);
+          if (v !== null) {
+            switch(key) {
+              case 'business_name': setBusinessName(v); break;
+              case 'phone': setPhone(v); break;
+              case 'address': setAddress(v); break;
+              case 'city': setCity(v); break;
+              case 'tax_id': setTaxId(v); break;
+              case 'website': setWebsite(v); break;
+              case 'email': setEmail(v); break;
+              case 'logo_url': setLogoUrl(v); break;
+              case 'receipt_footer': setReceiptFooter(v); break;
+              case 'bill_footer': setBillFooter(v); break;
+              case 'printer_server_ip': setPrinterServerIp(v); break;
+              case 'cashier_display_name': setCashierDisplayName(v); break;
+              case 'cashier2_lock': setCashier2Lock(v === 'true'); break;
+              case 'orders_pwd_required': setOrdersPwdRequired(v === 'true'); break;
+              case 'orders_action_pwd': setOrdersActionPwd(v); break;
+            }
+          }
         }
-      } catch {}
+      } catch (e) {
+        console.error("Failed to load settings", e);
+      }
     };
-    loadDisplayName();
+    loadSettings();
   }, []);
+
+  const saveSettingMutation = useMutation({
+    mutationFn: ({ key, value }: { key: string, value: string }) => api.settings.set(key, value),
+    onSuccess: () => toast.success('Setting saved'),
+    onError: () => toast.error('Failed to save setting')
+  });
+
+  const saveAllBusiness = () => {
+    saveSettingMutation.mutate({ key: 'business_name', value: businessName });
+    saveSettingMutation.mutate({ key: 'phone', value: phone });
+    saveSettingMutation.mutate({ key: 'address', value: address });
+    saveSettingMutation.mutate({ key: 'city', value: city });
+    saveSettingMutation.mutate({ key: 'tax_id', value: taxId });
+    saveSettingMutation.mutate({ key: 'website', value: website });
+    saveSettingMutation.mutate({ key: 'email', value: email });
+  };
+
+  const saveAllReceipt = () => {
+    saveSettingMutation.mutate({ key: 'logo_url', value: logoUrl });
+    saveSettingMutation.mutate({ key: 'receipt_footer', value: receiptFooter });
+    saveSettingMutation.mutate({ key: 'bill_footer', value: billFooter });
+    saveSettingMutation.mutate({ key: 'printer_server_ip', value: printerServerIp });
+    localStorage.setItem('printer_server_ip', printerServerIp);
+  };
 
   const changePasswordMutation = useMutation({
     mutationFn: (pwd: string) => api.profiles.changePassword(pwd),
@@ -87,13 +169,82 @@ const SettingsPage = () => {
           </div>
 
           <Tabs defaultValue="business" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="business">Business</TabsTrigger>
+              <TabsTrigger value="staff">Staff</TabsTrigger>
               <TabsTrigger value="receipt">Receipt</TabsTrigger>
               <TabsTrigger value="tax">Tax & Payment</TabsTrigger>
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
               <TabsTrigger value="security">Security</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="staff">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Staff Management
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your riders and other staff members
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label>Staff Name</Label>
+                      <Input 
+                        placeholder="Enter name" 
+                        value={newStaffName} 
+                        onChange={(e) => setNewStaffName(e.target.value)} 
+                      />
+                    </div>
+                    <div className="w-32 space-y-2">
+                      <Label>Role</Label>
+                      <select 
+                        className="w-full border rounded-md h-10 px-3"
+                        value={newStaffRole}
+                        onChange={(e) => setNewStaffRole(e.target.value)}
+                      >
+                        <option value="rider">Rider</option>
+                        <option value="waiter">Waiter</option>
+                        <option value="chef">Chef</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <Button onClick={handleAddStaff}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    {staffList.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-4">No staff added yet.</p>
+                    ) : (
+                      staffList.map((staff, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                          <div>
+                            <p className="font-bold uppercase">{staff.name}</p>
+                            <p className="text-xs text-muted-foreground uppercase">{staff.role}</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemoveStaff(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="business">
               <Card>
@@ -175,7 +326,7 @@ const SettingsPage = () => {
                   </div>
                   
                   <div className="pt-4">
-                    <Button onClick={() => toast.success("Business settings saved locally")}>
+                    <Button onClick={saveAllBusiness}>
                       Save Changes
                     </Button>
                   </div>
@@ -288,10 +439,7 @@ const SettingsPage = () => {
                   </div>
                   
                   <div className="pt-4">
-                    <Button onClick={() => {
-                      localStorage.setItem('printer_server_ip', printerServerIp);
-                      toast.success("Receipt & Printer settings saved locally");
-                    }}>
+                    <Button onClick={saveAllReceipt}>
                       Save Changes
                     </Button>
                   </div>
@@ -436,11 +584,10 @@ const SettingsPage = () => {
                       <Button
                         onClick={() => {
                           const value = cashierDisplayName || 'Anas';
+                          setCashierDisplayName(value);
+                          saveSettingMutation.mutate({ key: 'cashier_display_name', value });
                           localStorage.setItem('cashier_display_name', value);
-                          // backward compatibility
                           localStorage.setItem('cashier2_label', value);
-                          api.settings.set('cashier_display_name', value).catch(() => {});
-                          toast.success('Cashier display name saved');
                         }}
                       >
                         Save Display Name
@@ -461,8 +608,8 @@ const SettingsPage = () => {
                       checked={cashier2Lock}
                       onCheckedChange={(v) => {
                         setCashier2Lock(v);
+                        saveSettingMutation.mutate({ key: 'cashier2_lock', value: String(v) });
                         localStorage.setItem('cashier2_lock', String(v));
-                        toast.success('Casher lock updated');
                       }}
                     />
                   </div>
@@ -480,6 +627,7 @@ const SettingsPage = () => {
                       checked={ordersPwdRequired}
                       onCheckedChange={(v) => {
                         setOrdersPwdRequired(v);
+                        saveSettingMutation.mutate({ key: 'orders_pwd_required', value: String(v) });
                         localStorage.setItem('orders_pwd_required', String(v));
                       }}
                     />
@@ -494,8 +642,8 @@ const SettingsPage = () => {
                     <div className="pt-2">
                       <Button
                         onClick={() => {
+                          saveSettingMutation.mutate({ key: 'orders_action_pwd', value: ordersActionPwd || '' });
                           localStorage.setItem('orders_action_pwd', ordersActionPwd || '');
-                          toast.success('Orders action password saved');
                         }}
                       >
                         Save Password

@@ -10,9 +10,11 @@ import { toast } from 'sonner';
 import { useReactToPrint } from 'react-to-print';
 import { api } from '@/services/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Printer, X } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Printer, X, Trash2, Calendar } from 'lucide-react';
+import { startOfWeek, startOfMonth } from 'date-fns';
 
-const RIDERS = ['Ayaz', 'Mumtaz', 'Abuzar', 'Zafar'];
+const DEFAULT_RIDERS = ['Ayaz', 'Mumtaz', 'Abuzar', 'Zafar'];
 
 const RiderDepositsPage = () => {
   const queryClient = useQueryClient();
@@ -24,6 +26,24 @@ const RiderDepositsPage = () => {
   const [rangeTo, setRangeTo] = useState<Date>(endOfDay(new Date()));
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  const { data: staffListStr } = useQuery({
+    queryKey: ['settings', 'staff_list'],
+    queryFn: () => api.settings.get('staff_list'),
+  });
+
+  const riders = useMemo(() => {
+    if (!staffListStr) return DEFAULT_RIDERS;
+    try {
+      const parsed = JSON.parse(staffListStr);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s: any) => s.name || s);
+      }
+    } catch (e) {
+      console.error('Failed to parse staff list', e);
+    }
+    return DEFAULT_RIDERS;
+  }, [staffListStr]);
 
   const { data: deposits = [], isLoading: isLoadingDeposits } = useQuery({
     queryKey: ['rider-deposits', rangeFrom.toISOString(), rangeTo.toISOString()],
@@ -39,7 +59,7 @@ const RiderDepositsPage = () => {
     const stats = new Map<string, { rider: string; deposits: number; deliveries: number; collected: number }>();
     
     // Initialize stats for all known riders
-    RIDERS.forEach(r => stats.set(r, { rider: r, deposits: 0, deliveries: 0, collected: 0 }));
+    riders.forEach(r => stats.set(r, { rider: r, deposits: 0, deliveries: 0, collected: 0 }));
 
     // Calculate deposits
     deposits.forEach(d => {
@@ -51,17 +71,27 @@ const RiderDepositsPage = () => {
 
     // Calculate deliveries from orders
     orders.forEach(o => {
-      if (o.order_type === 'delivery' && o.rider_name) {
-        const key = o.rider_name;
-        if (!stats.has(key)) stats.set(key, { rider: key, deposits: 0, deliveries: 0, collected: 0 });
-        const current = stats.get(key)!;
+      // Check for delivery type and existence of rider info
+      // We look at rider_name column or nested rider object if it exists
+      const riderName = o.rider_name || o.rider?.name;
+      
+      if (o.order_type === 'delivery' && riderName) {
+        // Normalize name to match RIDERS array if possible (case-insensitive check)
+        const normalizedKey = riders.find(r => r.toLowerCase() === riderName.toLowerCase()) || riderName;
+        
+        if (!stats.has(normalizedKey)) {
+          stats.set(normalizedKey, { rider: normalizedKey, deposits: 0, deliveries: 0, collected: 0 });
+        }
+        
+        const current = stats.get(normalizedKey)!;
         current.deliveries += 1;
         current.collected += Number(o.total_amount || 0);
       }
     });
 
-    return Array.from(stats.values()).filter(s => s.deposits > 0 || s.deliveries > 0);
-  }, [deposits, orders]);
+    // Always return all main riders plus any others found in data
+    return Array.from(stats.values());
+  }, [deposits, orders, riders]);
 
   const totalAll = useMemo(() => {
     return riderStats.reduce((acc, s) => ({
@@ -81,6 +111,39 @@ const RiderDepositsPage = () => {
     },
     onError: (e: any) => toast.error(e?.message || 'Failed to save deposit'),
   });
+
+  const clearDepositsMutation = useMutation({
+    mutationFn: () => api.riderDeposits.clearRange(rangeFrom.toISOString(), rangeTo.toISOString()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rider-deposits'] });
+      toast.success('Deposits cleared for this range');
+    },
+    onError: (e: any) => toast.error(e?.message || 'Failed to clear deposits'),
+  });
+
+  const clearOrdersMutation = useMutation({
+    mutationFn: () => api.orders.deleteTodayOrders(), // Using today's orders clear for now as it's the safest
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders-range'] });
+      toast.success('Orders cleared for today');
+    },
+    onError: (e: any) => toast.error(e?.message || 'Failed to clear orders'),
+  });
+
+  const setToday = () => {
+    setRangeFrom(startOfDay(new Date()));
+    setRangeTo(endOfDay(new Date()));
+  };
+
+  const setWeek = () => {
+    setRangeFrom(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    setRangeTo(endOfDay(new Date()));
+  };
+
+  const setMonth = () => {
+    setRangeFrom(startOfMonth(new Date()));
+    setRangeTo(endOfDay(new Date()));
+  };
 
   const { data: printerIP } = useQuery({
     queryKey: ['settings', 'printer_server_ip'],
@@ -118,7 +181,7 @@ const RiderDepositsPage = () => {
             <label className="text-xs font-bold uppercase">Rider</label>
             <select value={rider} onChange={(e) => setRider(e.target.value)} className="border rounded-md h-10 px-3">
               <option value="">Select Rider</option>
-              {RIDERS.map(r => <option key={r} value={r}>{r}</option>)}
+              {riders.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div className="flex flex-col">
@@ -140,7 +203,15 @@ const RiderDepositsPage = () => {
         </div>
 
         <Card className="p-4">
-          <div className="flex items-end gap-3 mb-4">
+          <div className="flex flex-wrap items-end gap-3 mb-6">
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-md">
+              <Button variant="ghost" size="sm" onClick={setToday} className={rangeFrom.getTime() === startOfDay(new Date()).getTime() ? 'bg-white shadow-sm' : ''}>Today</Button>
+              <Button variant="ghost" size="sm" onClick={setWeek}>Week</Button>
+              <Button variant="ghost" size="sm" onClick={setMonth}>Month</Button>
+            </div>
+            
+            <Separator orientation="vertical" className="h-10" />
+
             <div>
               <label className="text-xs font-bold uppercase">From</label>
               <Input type="datetime-local" value={format(rangeFrom, "yyyy-MM-dd'T'HH:mm")} onChange={(e) => setRangeFrom(new Date(e.target.value))} className="h-10" />
@@ -149,11 +220,40 @@ const RiderDepositsPage = () => {
               <label className="text-xs font-bold uppercase">To</label>
               <Input type="datetime-local" value={format(rangeTo, "yyyy-MM-dd'T'HH:mm")} onChange={(e) => setRangeTo(new Date(e.target.value))} className="h-10" />
             </div>
+            
             <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['rider-deposits'] })}>Refresh</Button>
+            
             <Button onClick={() => setShowPrintPreview(true)} variant="outline">
               <Printer className="h-4 w-4 mr-2" />
               Print Summary
             </Button>
+
+            <div className="flex-1" />
+
+            <div className="flex gap-2">
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => {
+                  if (confirm('Clear ALL delivery data for today?')) clearOrdersMutation.mutate();
+                }}
+                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Data
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => {
+                  if (confirm('Clear ALL deposits in this range?')) clearDepositsMutation.mutate();
+                }}
+                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Deposits
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
