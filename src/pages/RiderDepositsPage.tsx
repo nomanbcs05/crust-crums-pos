@@ -9,6 +9,8 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { useReactToPrint } from 'react-to-print';
 import { api } from '@/services/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Printer, X } from 'lucide-react';
 
 const RIDERS = ['Ayaz', 'Mumtaz', 'Abuzar', 'Zafar'];
 
@@ -20,6 +22,7 @@ const RiderDepositsPage = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [rangeFrom, setRangeFrom] = useState<Date>(startOfDay(new Date()));
   const [rangeTo, setRangeTo] = useState<Date>(endOfDay(new Date()));
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const { data: deposits = [], isLoading } = useQuery({
@@ -73,6 +76,7 @@ const RiderDepositsPage = () => {
         })
       }).catch(err => console.error("Local printing failed:", err));
       toast.success('Rider deposits printed');
+      setShowPrintPreview(false);
     },
   });
 
@@ -116,7 +120,10 @@ const RiderDepositsPage = () => {
               <Input type="datetime-local" value={format(rangeTo, "yyyy-MM-dd'T'HH:mm")} onChange={(e) => setRangeTo(new Date(e.target.value))} className="h-10" />
             </div>
             <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['rider-deposits'] })}>Refresh</Button>
-            <Button onClick={() => handlePrint()} variant="outline">Print Summary</Button>
+            <Button onClick={() => setShowPrintPreview(true)} variant="outline">
+              <Printer className="h-4 w-4 mr-2" />
+              Print Summary
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -170,8 +177,19 @@ const RiderDepositsPage = () => {
             </div>
           </div>
 
-          <div className="print-visible-offscreen">
-            <div ref={printRef} className="p-4 font-mono text-[11px] bg-white text-black" style={{ width: '80mm' }}>
+        </Card>
+      </div>
+
+      {/* Print Preview Dialog */}
+      <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rider Deposits Summary</DialogTitle>
+            <DialogDescription className="sr-only">Preview of rider deposits for thermal printing</DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[60vh] overflow-auto flex justify-center bg-slate-100 p-4 rounded-lg">
+            <div ref={printRef} className="receipt-print p-4 font-mono text-[11px] bg-white text-black shadow-sm" style={{ width: '80mm' }}>
               <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Deposits Summary</div>
               <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
               
@@ -198,8 +216,19 @@ const RiderDepositsPage = () => {
               </div>
             </div>
           </div>
-        </Card>
-      </div>
+
+          <div className="flex gap-3 mt-4">
+            <Button variant="outline" className="flex-1" onClick={() => setShowPrintPreview(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Close
+            </Button>
+            <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handlePrint()}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print to Thermal
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
