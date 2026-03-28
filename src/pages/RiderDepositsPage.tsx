@@ -49,10 +49,31 @@ const RiderDepositsPage = () => {
     onError: (e: any) => toast.error(e?.message || 'Failed to save deposit'),
   });
 
+  const { data: printerIP } = useQuery({
+    queryKey: ['settings', 'printer_server_ip'],
+    queryFn: () => api.settings.get('printer_server_ip'),
+  });
+
+  const getPrinterUrl = (endpoint: string) => {
+    const ip = printerIP || localStorage.getItem('printer_server_ip') || 'localhost';
+    return `http://${ip}:5000${endpoint}`;
+  };
+
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Rider-Deposits-${format(rangeFrom, 'yyyy-MM-dd')}`,
-    onAfterPrint: () => toast.success('Rider deposits printed'),
+    documentTitle: "",
+    onAfterPrint: () => {
+      const htmlContent = printRef.current?.innerHTML || '';
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: 'DEPOSIT',
+          html: htmlContent
+        })
+      }).catch(err => console.error("Local printing failed:", err));
+      toast.success('Rider deposits printed');
+    },
   });
 
   return (
@@ -150,20 +171,30 @@ const RiderDepositsPage = () => {
           </div>
 
           <div className="print-visible-offscreen">
-            <div ref={printRef} className="p-4 font-mono text-[11px]" style={{ width: '80mm' }}>
-              <div className="text-center font-bold mb-2 uppercase">Rider Deposits</div>
+            <div ref={printRef} className="p-4 font-mono text-[11px] bg-white text-black" style={{ width: '80mm' }}>
+              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Deposits Summary</div>
               <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
-              <div className="border-b pb-1 mb-2">
+              
+              <div className="space-y-1 mb-4">
+                <div className="flex justify-between font-bold border-b border-dotted border-black pb-1">
+                  <span>RIDER</span>
+                  <span>TOTAL AMOUNT</span>
+                </div>
                 {totalByRider.map(r => (
-                  <div key={r.rider} className="flex justify-between">
-                    <span>{r.rider}</span>
-                    <span>Rs {r.total.toLocaleString()}</span>
+                  <div key={r.rider} className="flex justify-between py-0.5">
+                    <span className="uppercase">{r.rider}</span>
+                    <span className="font-bold">Rs {r.total.toLocaleString()}</span>
                   </div>
                 ))}
-                <div className="flex justify-between font-bold border-t mt-1 pt-1">
-                  <span>Total</span>
+                <div className="flex justify-between font-bold border-t border-black mt-2 pt-2 text-[13px]">
+                  <span>GRAND TOTAL</span>
                   <span>Rs {totalAll.toLocaleString()}</span>
                 </div>
+              </div>
+
+              <div className="text-center text-[9px] mt-4 pt-2 border-t border-dotted border-black">
+                <p>Printed on: {format(new Date(), 'dd-MMM-yy HH:mm')}</p>
+                <p className="font-bold mt-1">Designed & Developed By Genai Tech</p>
               </div>
             </div>
           </div>
