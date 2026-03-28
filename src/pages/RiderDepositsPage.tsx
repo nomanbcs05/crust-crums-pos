@@ -181,36 +181,25 @@ const RiderDepositsPage = () => {
               </div>
             </div>
             <div>
-              <h3 className="font-bold mb-2">Rider Summary</h3>
+              <h3 className="font-bold mb-2">Delivery Summary</h3>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Rider</TableHead>
-                      <TableHead className="text-center">Deliv.</TableHead>
-                      <TableHead className="text-right">Collected</TableHead>
-                      <TableHead className="text-right">Deposited</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
+                      <TableHead>Rider Name</TableHead>
+                      <TableHead className="text-right">Delivery Count</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {riderStats.map(s => (
                       <TableRow key={s.rider}>
                         <TableCell className="font-medium uppercase">{s.rider}</TableCell>
-                        <TableCell className="text-center">{s.deliveries}</TableCell>
-                        <TableCell className="text-right">Rs {s.collected.toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-green-600">Rs {s.deposits.toLocaleString()}</TableCell>
-                        <TableCell className={`text-right font-bold ${s.collected - s.deposits > 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                          Rs {(s.collected - s.deposits).toLocaleString()}
-                        </TableCell>
+                        <TableCell className="text-right font-bold text-lg">{s.deliveries}</TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="bg-slate-50 font-bold">
-                      <TableCell>TOTAL</TableCell>
-                      <TableCell className="text-center">{totalAll.deliveries}</TableCell>
-                      <TableCell className="text-right">Rs {totalAll.collected.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">Rs {totalAll.deposits.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">Rs {(totalAll.collected - totalAll.deposits).toLocaleString()}</TableCell>
+                    <TableRow className="bg-slate-50 font-bold border-t-2">
+                      <TableCell>TOTAL DELIVERIES</TableCell>
+                      <TableCell className="text-right text-lg">{totalAll.deliveries}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -220,38 +209,29 @@ const RiderDepositsPage = () => {
 
           <div className="print-visible-offscreen">
             <div ref={printRef} className="receipt-print p-4 font-mono text-[11px] bg-white text-black" style={{ width: '80mm' }}>
-              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Summary & Deposits</div>
-              <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
+              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1 text-[14px]">Rider Delivery Report</div>
+              <div className="text-center text-[10px] mb-4">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
               
               <div className="space-y-1 mb-4">
-                <div className="grid grid-cols-5 font-bold border-b border-dotted border-black pb-1 text-[9px]">
-                  <span className="col-span-1 text-left">RIDER</span>
-                  <span className="col-span-1 text-center">DLV</span>
-                  <span className="col-span-1 text-right">COLL</span>
-                  <span className="col-span-1 text-right">DEP</span>
-                  <span className="col-span-1 text-right">BAL</span>
+                <div className="flex justify-between font-bold border-b border-black pb-1 text-[11px]">
+                  <span>RIDER</span>
+                  <span>DELIVERIES</span>
                 </div>
                 {riderStats.map(s => (
-                  <div key={s.rider} className="grid grid-cols-5 py-1 border-b border-dotted border-gray-200 text-[10px]">
-                    <span className="col-span-1 uppercase truncate">{s.rider}</span>
-                    <span className="col-span-1 text-center">{s.deliveries}</span>
-                    <span className="col-span-1 text-right">{s.collected.toLocaleString()}</span>
-                    <span className="col-span-1 text-right text-green-700">{s.deposits.toLocaleString()}</span>
-                    <span className="col-span-1 text-right font-bold">{(s.collected - s.deposits).toLocaleString()}</span>
+                  <div key={s.rider} className="flex justify-between py-2 border-b border-dotted border-gray-300 text-[12px]">
+                    <span className="uppercase">{s.rider}</span>
+                    <span className="font-bold">{s.deliveries}</span>
                   </div>
                 ))}
-                <div className="grid grid-cols-5 font-bold border-t border-black mt-2 pt-2 text-[11px]">
-                  <span className="col-span-1">TOTAL</span>
-                  <span className="col-span-1 text-center">{totalAll.deliveries}</span>
-                  <span className="col-span-1 text-right">{totalAll.collected.toLocaleString()}</span>
-                  <span className="col-span-1 text-right">{totalAll.deposits.toLocaleString()}</span>
-                  <span className="col-span-1 text-right">{(totalAll.collected - totalAll.deposits).toLocaleString()}</span>
+                <div className="flex justify-between font-bold border-t-2 border-black mt-2 pt-2 text-[14px]">
+                  <span>TOTAL</span>
+                  <span>{totalAll.deliveries}</span>
                 </div>
               </div>
 
-              <div className="text-center text-[9px] mt-4 pt-2 border-t border-dotted border-black">
+              <div className="text-center text-[9px] mt-6 pt-2 border-t border-dotted border-black">
                 <p>Printed on: {format(new Date(), 'dd-MMM-yy HH:mm')}</p>
-                <p className="font-bold mt-1">Designed & Developed By Genai Tech</p>
+                <p className="font-bold mt-1 uppercase">Genai Tech POS System</p>
               </div>
             </div>
           </div>
@@ -262,44 +242,35 @@ const RiderDepositsPage = () => {
       <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Rider Summary Preview</DialogTitle>
-            <DialogDescription className="sr-only">Preview of rider deliveries and deposits</DialogDescription>
+            <DialogTitle>Delivery Summary Preview</DialogTitle>
+            <DialogDescription className="sr-only">Preview of rider delivery counts</DialogDescription>
           </DialogHeader>
           
           <div className="max-h-[60vh] overflow-auto flex justify-center bg-slate-100 p-4 rounded-lg">
             <div ref={printRef} className="receipt-print p-4 font-mono text-[11px] bg-white text-black shadow-sm" style={{ width: '80mm' }}>
-              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1">Rider Summary & Deposits</div>
-              <div className="text-center text-[10px] mb-2">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
+              <div className="text-center font-bold mb-2 uppercase border-b border-black pb-1 text-[14px]">Rider Delivery Report</div>
+              <div className="text-center text-[10px] mb-4">{format(rangeFrom, 'dd-MMM yyyy HH:mm')} - {format(rangeTo, 'dd-MMM yyyy HH:mm')}</div>
               
               <div className="space-y-1 mb-4">
-                <div className="grid grid-cols-5 font-bold border-b border-dotted border-black pb-1 text-[9px]">
-                  <span className="col-span-1 text-left">RIDER</span>
-                  <span className="col-span-1 text-center">DLV</span>
-                  <span className="col-span-1 text-right">COLL</span>
-                  <span className="col-span-1 text-right">DEP</span>
-                  <span className="col-span-1 text-right">BAL</span>
+                <div className="flex justify-between font-bold border-b border-black pb-1 text-[11px]">
+                  <span>RIDER</span>
+                  <span>DELIVERIES</span>
                 </div>
                 {riderStats.map(s => (
-                  <div key={s.rider} className="grid grid-cols-5 py-1 border-b border-dotted border-gray-200 text-[10px]">
-                    <span className="col-span-1 uppercase truncate">{s.rider}</span>
-                    <span className="col-span-1 text-center">{s.deliveries}</span>
-                    <span className="col-span-1 text-right">{s.collected.toLocaleString()}</span>
-                    <span className="col-span-1 text-right text-green-700">{s.deposits.toLocaleString()}</span>
-                    <span className="col-span-1 text-right font-bold">{(s.collected - s.deposits).toLocaleString()}</span>
+                  <div key={s.rider} className="flex justify-between py-2 border-b border-dotted border-gray-300 text-[12px]">
+                    <span className="uppercase">{s.rider}</span>
+                    <span className="font-bold">{s.deliveries}</span>
                   </div>
                 ))}
-                <div className="grid grid-cols-5 font-bold border-t border-black mt-2 pt-2 text-[11px]">
-                  <span className="col-span-1">TOTAL</span>
-                  <span className="col-span-1 text-center">{totalAll.deliveries}</span>
-                  <span className="col-span-1 text-right">{totalAll.collected.toLocaleString()}</span>
-                  <span className="col-span-1 text-right">{totalAll.deposits.toLocaleString()}</span>
-                  <span className="col-span-1 text-right">{(totalAll.collected - totalAll.deposits).toLocaleString()}</span>
+                <div className="flex justify-between font-bold border-t-2 border-black mt-2 pt-2 text-[14px]">
+                  <span>TOTAL</span>
+                  <span>{totalAll.deliveries}</span>
                 </div>
               </div>
 
-              <div className="text-center text-[9px] mt-4 pt-2 border-t border-dotted border-black">
+              <div className="text-center text-[9px] mt-6 pt-2 border-t border-dotted border-black">
                 <p>Printed on: {format(new Date(), 'dd-MMM-yy HH:mm')}</p>
-                <p className="font-bold mt-1">Designed & Developed By Genai Tech</p>
+                <p className="font-bold mt-1 uppercase">Genai Tech POS System</p>
               </div>
             </div>
           </div>
