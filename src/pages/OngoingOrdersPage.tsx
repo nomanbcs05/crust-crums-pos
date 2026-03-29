@@ -247,26 +247,30 @@ const OngoingOrdersPage = () => {
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
-    documentTitle: "",
+    documentTitle: "Bill",
     onAfterPrint: async () => {
-      toast.success('Bill printed successfully');
-
-      // Send to local printer
+      // Dual Printer Support: Send to BOTH printers
       const htmlContent = billRef.current?.innerHTML || '';
+      
+      // 1. Send to Cash Printer
       fetch(getPrinterUrl('/print/bill'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...billOrder,
-          html: htmlContent
-        })
-      }).catch(err => console.error("Local printing failed:", err));
+        body: JSON.stringify({ ...billOrder, html: htmlContent })
+      }).catch(err => console.error("Cash printing failed:", err));
+
+      // 2. Send to Kitchen Printer (KOT)
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...billOrder, html: htmlContent })
+      }).catch(err => console.error("Kitchen printing failed:", err));
 
       // Mark order as completed
       if (billOrder?.id) {
         await api.orders.updateStatus(billOrder.id, 'completed');
         queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-        toast.success('Order marked as completed');
+        toast.success('Order completed and print requests sent to both printers');
         setSelectedOrderId(null);
       }
 
@@ -910,7 +914,7 @@ const OngoingOrdersPage = () => {
       </div>
 
       {/* Hidden Printing Container */}
-      <div className="hidden">
+      <div className="print-visible-offscreen">
         {billOrder && (
           <Bill ref={billRef} order={billOrder} />
         )}
@@ -942,33 +946,8 @@ const OngoingOrdersPage = () => {
             <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
               Close
             </Button>
-            <Button className="flex-1" onClick={() => {
-              // ONLY send to local printer to avoid browser print dialog
-              const htmlContent = billRef.current?.innerHTML || '';
-              fetch(getPrinterUrl('/print/bill'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  ...billOrder,
-                  html: htmlContent
-                })
-              }).catch(err => console.error("Local printing failed:", err));
-
-              // Mark order as completed
-              if (billOrder?.id) {
-                api.orders.updateStatus(billOrder.id, 'completed').then(() => {
-                  queryClient.invalidateQueries({ queryKey: ['ongoing-orders'] });
-                  toast.success('Order marked as completed');
-                  setSelectedOrderId(null);
-                });
-              }
-
-              toast.success('Printing bill...');
-              setTimeout(() => {
-                setShowBill(false);
-                setBillOrder(null);
-              }, 1000);
-            }}>
+            <Button className="flex-1" onClick={() => handlePrintBill()}>
+              <Printer className="h-4 w-4 mr-2" />
               Print Bill
             </Button>
           </div>

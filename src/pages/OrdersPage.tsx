@@ -185,27 +185,33 @@ const OrdersPage = () => {
 
   const handlePrintIndividual = useReactToPrint({
     contentRef: receiptRef,
-    documentTitle: "",
+    documentTitle: "Receipt",
     onAfterPrint: () => {
-      // Send to local printer
+      // Send to BOTH printers
       const htmlContent = receiptRef.current?.innerHTML || '';
+      
+      // 1. Send to Cash Printer
       fetch(getPrinterUrl('/print/bill'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...printingOrder,
-          html: htmlContent
-        })
-      }).catch(err => console.error("Local printing failed:", err));
+        body: JSON.stringify({ ...printingOrder, html: htmlContent })
+      }).catch(err => console.error("Cash printing failed:", err));
+
+      // 2. Send to Kitchen Printer (KOT)
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...printingOrder, html: htmlContent })
+      }).catch(err => console.error("Kitchen printing failed:", err));
 
       setPrintingOrder(null);
-      toast.success('Receipt printed successfully');
+      toast.success('Receipt sent to both printers');
     },
   });
 
   const handlePrintKOT = useReactToPrint({
     contentRef: kotRef,
-    documentTitle: "",
+    documentTitle: "KOT",
     onAfterPrint: () => {
       // Send to local printer
       const htmlContent = kotRef.current?.innerHTML || '';
@@ -225,30 +231,33 @@ const OrdersPage = () => {
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
-    documentTitle: "",
+    documentTitle: "Bill",
     onAfterPrint: async () => {
-      toast.success('Bill printed successfully');
-
-      // Send to local printer
+      // Dual Printer Support: Send to BOTH printers
       const htmlContent = billRef.current?.innerHTML || '';
+      
+      // 1. Send to Cash Printer
       fetch(getPrinterUrl('/print/bill'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...billOrder,
-          html: htmlContent
-        })
-      }).catch(err => console.error("Local printing failed:", err));
+        body: JSON.stringify({ ...billOrder, html: htmlContent })
+      }).catch(err => console.error("Cash printing failed:", err));
+
+      // 2. Send to Kitchen Printer (KOT)
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...billOrder, html: htmlContent })
+      }).catch(err => console.error("Kitchen printing failed:", err));
 
       // If we have a bill order and it has an ID, update its status to completed
       if (billOrder?.id) {
         try {
           await api.orders.updateStatus(billOrder.id, 'completed');
           queryClient.invalidateQueries({ queryKey: ['orders'] });
-          toast.success('Order marked as completed');
+          toast.success('Order completed and print requests sent to both printers');
         } catch (error) {
           console.error('Failed to update order status after printing:', error);
-          toast.error('Failed to mark order as completed');
         }
       }
 
@@ -835,29 +844,7 @@ const OrdersPage = () => {
               <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
                 Close
               </Button>
-              <Button className="flex-1" onClick={() => {
-                const htmlContent = billRef.current?.innerHTML || '';
-                fetch(getPrinterUrl('/print/bill'), {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...billOrder,
-                    html: htmlContent
-                  })
-                }).catch(err => console.error("Local printing failed:", err));
-
-                if (billOrder?.id) {
-                  api.orders.updateStatus(billOrder.id, 'completed').then(() => {
-                    queryClient.invalidateQueries({ queryKey: ['orders'] });
-                  });
-                }
-
-                toast.success('Printing bill...');
-                setTimeout(() => {
-                  setShowBill(false);
-                  setBillOrder(null);
-                }, 1000);
-              }}>
+              <Button className="flex-1" onClick={() => handlePrintBill()}>
                 Print Bill
               </Button>
             </div>
@@ -880,23 +867,7 @@ const OrdersPage = () => {
               <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
                 Close
               </Button>
-              <Button className="flex-1" onClick={() => {
-                const htmlContent = receiptRef.current?.innerHTML || '';
-                fetch(getPrinterUrl('/print/bill'), {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...printingOrder,
-                    html: htmlContent
-                  })
-                }).catch(err => console.error("Local printing failed:", err));
-                
-                toast.success('Printing receipt...');
-                setTimeout(() => {
-                  setShowReceipt(false);
-                  setPrintingOrder(null);
-                }, 1000);
-              }}>
+              <Button className="flex-1" onClick={() => handlePrintIndividual()}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print Receipt
               </Button>
@@ -920,23 +891,7 @@ const OrdersPage = () => {
               <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
                 Close
               </Button>
-              <Button className="flex-1" onClick={() => {
-                const htmlContent = kotRef.current?.innerHTML || '';
-                fetch(getPrinterUrl('/print/kot'), {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...printingKOTOrder,
-                    html: htmlContent
-                  })
-                }).catch(err => console.error("Local printing failed:", err));
-                
-                toast.success('Printing KOT...');
-                setTimeout(() => {
-                  setShowKOT(false);
-                  setPrintingKOTOrder(null);
-                }, 1000);
-              }}>
+              <Button className="flex-1" onClick={() => handlePrintKOT()}>
                 <Printer className="h-4 w-4 mr-2" />
                 Print KOT
               </Button>
