@@ -70,7 +70,7 @@ const RiderDepositsPage = () => {
     });
 
     // Calculate deliveries from orders
-    orders.forEach(o => {
+    orders.forEach((o: any) => {
       // Check for delivery type and existence of rider info
       // We look at rider_name column or nested rider object if it exists
       const riderName = o.rider_name || o.rider?.name;

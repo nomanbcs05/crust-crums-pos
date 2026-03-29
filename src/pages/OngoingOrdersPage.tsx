@@ -259,7 +259,7 @@ const OngoingOrdersPage = () => {
         body: JSON.stringify({ ...billOrder, html: htmlContent })
       }).catch(err => console.error("Cash printing failed:", err));
 
-      // 2. Send to Kitchen Printer (KOT)
+      // 2. Send to Kitchen Printer (KOT style)
       fetch(getPrinterUrl('/print/kot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -274,7 +274,6 @@ const OngoingOrdersPage = () => {
         setSelectedOrderId(null);
       }
 
-      setShowBill(false);
       setBillOrder(null);
     },
   });
@@ -381,7 +380,10 @@ const OngoingOrdersPage = () => {
 
     const billData = prepareBillData(orderRequiringRider, rider);
     setBillOrder(billData);
-    setShowBill(true);
+    // Trigger print directly instead of showing preview
+    setTimeout(() => {
+      handlePrintBill();
+    }, 100);
 
     if (riderActionType === 'pay') {
       payOrderMutation.mutate({ 
@@ -601,7 +603,10 @@ const OngoingOrdersPage = () => {
                                 } else {
                                   const billData = prepareBillData(order);
                                   setBillOrder(billData);
-                                  setShowBill(true);
+                                  // Trigger print directly
+                                  setTimeout(() => {
+                                    handlePrintBill();
+                                  }, 100);
                                 }
                               }}
                             >
@@ -878,7 +883,10 @@ const OngoingOrdersPage = () => {
                           } else {
                             const billData = prepareBillData(selectedOrder);
                             setBillOrder(billData);
-                            setShowBill(true);
+                            // Trigger print directly
+                            setTimeout(() => {
+                              handlePrintBill();
+                            }, 100);
                           }
                         }}
                       >
@@ -929,30 +937,6 @@ const OngoingOrdersPage = () => {
         }}
         onSelect={handleRiderSelect}
       />
-
-      {/* Bill Dialog */}
-      <Dialog open={showBill} onOpenChange={setShowBill}>
-        <DialogContent className="max-w-md" aria-describedby="ongoing-bill-description">
-          <DialogHeader>
-            <DialogTitle>Bill Preview</DialogTitle>
-            <DialogDescription id="ongoing-bill-description" className="sr-only">Bill for current order</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[80vh] overflow-auto">
-            {billOrder && (
-              <Bill order={billOrder} />
-            )}
-          </div>
-          <div className="flex gap-3 mt-4">
-            <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
-              Close
-            </Button>
-            <Button className="flex-1" onClick={() => handlePrintBill()}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Bill
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 };

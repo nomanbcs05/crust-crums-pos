@@ -197,7 +197,7 @@ const OrdersPage = () => {
         body: JSON.stringify({ ...printingOrder, html: htmlContent })
       }).catch(err => console.error("Cash printing failed:", err));
 
-      // 2. Send to Kitchen Printer (KOT)
+      // 2. Send to Kitchen Printer (KOT style)
       fetch(getPrinterUrl('/print/kot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -213,19 +213,25 @@ const OrdersPage = () => {
     contentRef: kotRef,
     documentTitle: "KOT",
     onAfterPrint: () => {
-      // Send to local printer
+      // Send to BOTH printers
       const htmlContent = kotRef.current?.innerHTML || '';
+      
+      // 1. Send to Kitchen Printer
       fetch(getPrinterUrl('/print/kot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...printingKOTOrder,
-          html: htmlContent
-        })
-      }).catch(err => console.error("Local printing failed:", err));
+        body: JSON.stringify({ ...printingKOTOrder, html: htmlContent })
+      }).catch(err => console.error("Kitchen printing failed:", err));
+
+      // 2. Send to Cash Printer
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...printingKOTOrder, html: htmlContent })
+      }).catch(err => console.error("Cash printing failed:", err));
 
       setPrintingKOTOrder(null);
-      toast.success('Duplicate KOT printed successfully');
+      toast.success('KOT sent to both printers');
     },
   });
 
@@ -243,7 +249,7 @@ const OrdersPage = () => {
         body: JSON.stringify({ ...billOrder, html: htmlContent })
       }).catch(err => console.error("Cash printing failed:", err));
 
-      // 2. Send to Kitchen Printer (KOT)
+      // 2. Send to Kitchen Printer (KOT style)
       fetch(getPrinterUrl('/print/kot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +267,6 @@ const OrdersPage = () => {
         }
       }
 
-      setShowBill(false);
       setBillOrder(null);
     },
   });
@@ -318,7 +323,10 @@ const OrdersPage = () => {
       };
 
       setPrintingOrder(formattedOrder);
-      setShowReceipt(true);
+      // Trigger print directly
+      setTimeout(() => {
+        handlePrintIndividual();
+      }, 100);
     } catch (err) {
       console.error('Error printing order:', err);
       toast.error('Failed to load order details for printing');
@@ -353,7 +361,10 @@ const OrdersPage = () => {
       };
 
       setPrintingKOTOrder(formattedOrder);
-      setShowKOT(true);
+      // Trigger print directly
+      setTimeout(() => {
+        handlePrintKOT();
+      }, 100);
     } catch (err) {
       console.error('Error printing duplicate KOT:', err);
       toast.error('Failed to load order details for KOT printing');
@@ -400,8 +411,10 @@ const OrdersPage = () => {
       };
 
       setBillOrder(billData);
-      setShowBill(true);
-      // Printing will only be triggered by the Print button now
+      // Trigger print directly
+      setTimeout(() => {
+        handlePrintBill();
+      }, 100);
     } catch (err) {
       console.error('Error printing bill:', err);
       toast.error('Failed to load order details for bill printing');
@@ -827,78 +840,14 @@ const OrdersPage = () => {
               isDuplicate={true}
             />
           )}
+          {billOrder && (
+            <Bill
+              ref={billRef}
+              order={billOrder}
+            />
+          )}
         </div>
 
-        <Dialog open={showBill} onOpenChange={setShowBill}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Bill Preview</DialogTitle>
-              <DialogDescription className="sr-only">Bill for historical order</DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[80vh] overflow-auto">
-              {billOrder && (
-                <Bill ref={billRef} order={billOrder} />
-              )}
-            </div>
-            <div className="flex gap-3 mt-4">
-              <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
-                Close
-              </Button>
-              <Button className="flex-1" onClick={() => handlePrintBill()}>
-                Print Bill
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Receipt Dialog */}
-        <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Receipt Preview</DialogTitle>
-              <DialogDescription className="sr-only">Order Receipt</DialogDescription>
-            </DialogHeader>
-            {printingOrder && (
-              <div className="max-h-[70vh] overflow-auto">
-                <Receipt ref={receiptRef} order={printingOrder} />
-              </div>
-            )}
-            <div className="flex gap-2 mt-4">
-              <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
-                Close
-              </Button>
-              <Button className="flex-1" onClick={() => handlePrintIndividual()}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Receipt
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* KOT Dialog */}
-        <Dialog open={showKOT} onOpenChange={setShowKOT}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>KOT Preview</DialogTitle>
-              <DialogDescription className="sr-only">Kitchen Order Ticket</DialogDescription>
-            </DialogHeader>
-            {printingKOTOrder && (
-              <div className="max-h-[70vh] overflow-auto">
-                <KOT ref={kotRef} order={printingKOTOrder} isDuplicate={true} />
-              </div>
-            )}
-            <div className="flex gap-2 mt-4">
-              <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
-                Close
-              </Button>
-              <Button className="flex-1" onClick={() => handlePrintKOT()}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print KOT
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-+
           {/* Order Details Modal */}
           <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
           <DialogContent className="max-w-md overflow-hidden p-0 bg-white">

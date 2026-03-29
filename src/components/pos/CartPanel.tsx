@@ -104,11 +104,23 @@ const CartPanel = () => {
     documentTitle: "KOT",
     onAfterPrint: () => {
       const htmlContent = kotRef.current?.innerHTML || '';
+      
+      // Send to BOTH printers as requested
+      // 1. Send to Kitchen Printer
       fetch(getPrinterUrl('/print/kot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...lastOrder, html: htmlContent })
       }).catch(err => console.error("Kitchen printing failed:", err));
+
+      // 2. Send to Cash Printer
+      fetch(getPrinterUrl('/print/bill'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...lastOrder, html: htmlContent })
+      }).catch(err => console.error("Cash printing failed:", err));
+
+      toast.success('KOT requests sent to both printers');
     }
   });
 
@@ -117,11 +129,23 @@ const CartPanel = () => {
     documentTitle: "Bill",
     onAfterPrint: () => {
       const htmlContent = billRef.current?.innerHTML || '';
+
+      // Send to BOTH printers as requested
+      // 1. Send to Cash Printer
       fetch(getPrinterUrl('/print/bill'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...lastOrder, html: htmlContent })
       }).catch(err => console.error("Cash printing failed:", err));
+
+      // 2. Send to Kitchen Printer
+      fetch(getPrinterUrl('/print/kot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...lastOrder, html: htmlContent })
+      }).catch(err => console.error("Kitchen printing failed:", err));
+
+      toast.success('Bill requests sent to both printers');
     }
   });
 
@@ -236,8 +260,12 @@ const CartPanel = () => {
       }
       setLastOrder(orderData);
       
-      // No longer silent printing here - just show the receipt preview
-      setShowReceipt(true);
+      // Trigger print directly instead of showing preview
+      setTimeout(() => {
+        handlePrint();
+        navigate('/ongoing-orders');
+      }, 100);
+
       toast.success(editingOrderId ? `Order updated!` : `Order completed!`);
       clearCart();
     },
@@ -251,7 +279,10 @@ const CartPanel = () => {
   const performShowBill = async () => {
     const orderData = await prepareOrderData();
     setLastOrder(orderData);
-    setShowBill(true);
+    // Trigger print directly instead of showing preview
+    setTimeout(() => {
+      handlePrintBill();
+    }, 100);
   };
 
   const prepareOrderData = async (): Promise<{
@@ -322,8 +353,12 @@ const CartPanel = () => {
       }
       setLastOrder(orderData);
       
-      // No longer silent printing here - just show the KOT preview
-      setShowKOT(true);
+      // Trigger print directly instead of showing preview
+      setTimeout(() => {
+        handlePrintKOT();
+        navigate('/ongoing-orders');
+      }, 100);
+
       toast.success('Order sent to kitchen');
       clearCart();
     },
@@ -743,95 +778,6 @@ const CartPanel = () => {
           setShowTableModal(false);
         }}
       />
-
-      {/* Receipt Dialog */}
-      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="max-w-md" aria-describedby="receipt-description">
-          <DialogHeader>
-            <DialogTitle>Receipt Preview</DialogTitle>
-            <DialogDescription id="receipt-description" className="sr-only">Order Receipt</DialogDescription>
-          </DialogHeader>
-          {lastOrder && (
-            <div className="max-h-[70vh] overflow-auto">
-              <Receipt ref={receiptRef} order={lastOrder} />
-            </div>
-          )}
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" className="flex-1" onClick={() => setShowReceipt(false)}>
-              Close
-            </Button>
-            <Button className="flex-1" onClick={() => {
-              handlePrint();
-              setTimeout(() => {
-                setShowReceipt(false);
-                navigate('/ongoing-orders');
-              }, 500);
-            }}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Receipt
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* KOT Dialog */}
-      <Dialog open={showKOT} onOpenChange={setShowKOT}>
-        <DialogContent className="max-w-md" aria-describedby="kot-description">
-          <DialogHeader>
-            <DialogTitle>KOT Preview</DialogTitle>
-            <DialogDescription id="kot-description" className="sr-only">Kitchen Order Ticket</DialogDescription>
-          </DialogHeader>
-          {lastOrder && (
-            <div className="max-h-[70vh] overflow-auto">
-              <KOT ref={kotRef} order={lastOrder} />
-            </div>
-          )}
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" className="flex-1" onClick={() => setShowKOT(false)}>
-              Close
-            </Button>
-            <Button className="flex-1" onClick={() => {
-              handlePrintKOT();
-              setTimeout(() => {
-                setShowKOT(false);
-                navigate('/ongoing-orders');
-              }, 500);
-            }}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print KOT
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bill Dialog */}
-      <Dialog open={showBill} onOpenChange={setShowBill}>
-        <DialogContent className="max-w-md" aria-describedby="bill-description">
-          <DialogHeader>
-            <DialogTitle>Bill Preview</DialogTitle>
-            <DialogDescription id="bill-description" className="sr-only">Customer Bill</DialogDescription>
-          </DialogHeader>
-          {lastOrder && (
-            <div className="max-h-[70vh] overflow-auto">
-              <Bill ref={billRef} order={lastOrder} />
-            </div>
-          )}
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" className="flex-1" onClick={() => setShowBill(false)}>
-              Close
-            </Button>
-            <Button className="flex-1" onClick={() => {
-              handlePrintBill();
-              setTimeout(() => {
-                setShowBill(false);
-              }, 500);
-            }}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Bill
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Hidden print components for ref access */}
       <div className="print-visible-offscreen">
