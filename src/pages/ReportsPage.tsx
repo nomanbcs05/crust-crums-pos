@@ -198,13 +198,26 @@ const ReportsPage = () => {
     );
   }
 
+  const { data: openRegister } = useQuery({
+    queryKey: ['open-register'],
+    queryFn: api.registers.getOpen,
+  });
+
   const handleEndShift = async () => {
+    if (!confirm('Are you sure you want to end your shift and close the register?')) return;
+
     try {
+      if (openRegister) {
+        // We could prompt for ending amount, but for now we just close it
+        await api.registers.close(openRegister.id, 0, 'Shift ended from reports page');
+      }
       localStorage.removeItem('pos_local_user');
       await supabase.auth.signOut();
       navigate('/auth');
     } catch (e) {
-      // Silent fail, not critical for end-shift
+      console.error("End shift failed:", e);
+      // Fallback signout
+      await supabase.auth.signOut();
       navigate('/auth');
     }
   };

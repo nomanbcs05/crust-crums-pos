@@ -22,7 +22,8 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/services/api';
 import StartDayModal from '@/components/pos/StartDayModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -30,13 +31,18 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showStartSessionModal, setShowStartSessionModal] = useState(false);
+  const queryClient = useQueryClient();
 
   // Get username from localStorage (set after login)
   const username = (typeof window !== 'undefined' && localStorage.getItem('pos_local_user')) || '';
-  const queryClient = useQueryClient();
 
   const role = (typeof window !== 'undefined' && localStorage.getItem('active_role')) || 'cashier';
   const cashier2Lock = (typeof window !== 'undefined' && localStorage.getItem('cashier2_lock')) === 'true';
+
+  const { data: openRegister } = useQuery({
+    queryKey: ['open-register'],
+    queryFn: api.registers.getOpen,
+  });
 
   let navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutGrid },
@@ -63,6 +69,24 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       ['/', '/ongoing-orders', '/orders'].includes(item.href)
     );
   }
+
+  const handleEndShift = async () => {
+    if (!confirm('Are you sure you want to end your shift and close the register?')) return;
+
+    try {
+      if (openRegister) {
+        await api.registers.close(openRegister.id, 0, 'Shift ended from sidebar');
+        queryClient.invalidateQueries({ queryKey: ['open-register'] });
+      }
+      localStorage.removeItem('pos_local_user');
+      await supabase.auth.signOut();
+      navigate('/auth');
+    } catch (e) {
+      console.error("End shift failed:", e);
+      await supabase.auth.signOut();
+      navigate('/auth');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -190,32 +214,63 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
           </div>
 
           {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleLogout}
-                  className={cn(
-                    "w-full mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-all min-w-max",
-                    "justify-center"
-                  )}
-                >
-                  <LogOut className="h-3.5 w-3.5 shrink-0" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-bold font-heading uppercase text-[10px] tracking-widest">
-                Log out
-              </TooltipContent>
-            </Tooltip>
+            <div className="space-y-2 mt-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleEndShift}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-orange-500/10 hover:text-orange-500 transition-all min-w-max",
+                      "justify-center"
+                    )}
+                  >
+                    <PlusCircle className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-bold font-heading uppercase text-[10px] tracking-widest">
+                  End Shift
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleLogout}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-all min-w-max",
+                      "justify-center"
+                    )}
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="font-bold font-heading uppercase text-[10px] tracking-widest">
+                  Logout
+                </TooltipContent>
+              </Tooltip>
+            </div>
           ) : (
-            <button
-              onClick={handleLogout}
-              className={cn(
-                "w-full mt-3 flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-all min-w-max"
-              )}
-            >
-              <LogOut className="h-3.5 w-3.5 shrink-0" />
-              <span className="animate-in fade-in slide-in-from-left-2 duration-300">Log out</span>
-            </button>
+            <div className="space-y-2 mt-3">
+              <button
+                onClick={handleEndShift}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-orange-500/10 hover:text-orange-500 transition-all min-w-max group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0 group-hover:bg-orange-500/20">
+                  <PlusCircle className="h-4 w-4 text-orange-500" />
+                </div>
+                <span className="animate-in fade-in slide-in-from-left-2 duration-300">End Shift</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold font-heading uppercase tracking-widest text-sidebar-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-all min-w-max group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0 group-hover:bg-destructive/20">
+                  <LogOut className="h-4 w-4 text-destructive" />
+                </div>
+                <span className="animate-in fade-in slide-in-from-left-2 duration-300">Logout</span>
+              </button>
+            </div>
           )}
         </div>
 
