@@ -83,13 +83,20 @@ const OngoingOrdersPage = () => {
   }, [showDetailPanel]);
   const queryClient = useQueryClient();
 
-  const { data: printerIP } = useQuery({
-    queryKey: ['settings', 'printer_server_ip'],
-    queryFn: () => api.settings.get('printer_server_ip'),
+  const { data: kitchenPrinterIP } = useQuery({
+    queryKey: ['settings', 'kitchen_printer_ip'],
+    queryFn: () => api.settings.get('kitchen_printer_ip'),
+  });
+
+  const { data: cashPrinterIP } = useQuery({
+    queryKey: ['settings', 'cash_printer_ip'],
+    queryFn: () => api.settings.get('cash_printer_ip'),
   });
 
   const getPrinterUrl = (endpoint: string) => {
-    const ip = printerIP || 'localhost';
+    const ip = endpoint.includes('kot') 
+      ? (kitchenPrinterIP || localStorage.getItem('kitchen_printer_ip') || '192.168.1.150')
+      : (cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151');
     return `http://${ip}:5000${endpoint}`;
   };
 

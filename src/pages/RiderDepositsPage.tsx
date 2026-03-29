@@ -145,13 +145,13 @@ const RiderDepositsPage = () => {
     setRangeTo(endOfDay(new Date()));
   };
 
-  const { data: printerIP } = useQuery({
-    queryKey: ['settings', 'printer_server_ip'],
-    queryFn: () => api.settings.get('printer_server_ip'),
+  const { data: cashPrinterIP } = useQuery({
+    queryKey: ['settings', 'cash_printer_ip'],
+    queryFn: () => api.settings.get('cash_printer_ip'),
   });
 
   const getPrinterUrl = (endpoint: string) => {
-    const ip = printerIP || localStorage.getItem('printer_server_ip') || 'localhost';
+    const ip = cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151';
     return `http://${ip}:5000${endpoint}`;
   };
 

@@ -28,7 +28,8 @@ const SettingsPage = () => {
   const [logoUrl, setLogoUrl] = useState('');
   const [receiptFooter, setReceiptFooter] = useState('Thank you for your visit! Come back soon!');
   const [billFooter, setBillFooter] = useState('!!!!FOR THE LOVE OF FOOD !!!!');
-  const [printerServerIp, setPrinterServerIp] = useState(localStorage.getItem('printer_server_ip') || 'localhost');
+  const [kitchenPrinterIp, setKitchenPrinterIp] = useState(localStorage.getItem('kitchen_printer_ip') || '192.168.1.150');
+  const [cashPrinterIp, setCashPrinterIp] = useState(localStorage.getItem('cash_printer_ip') || '192.168.1.151');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cashierDisplayName, setCashierDisplayName] = useState(localStorage.getItem('cashier_display_name') || 'Anas');
@@ -73,7 +74,7 @@ const SettingsPage = () => {
         const keys = [
           'business_name', 'phone', 'address', 'city', 'tax_id', 
           'website', 'email', 'logo_url', 'receipt_footer', 'bill_footer',
-          'printer_server_ip', 'cashier_display_name', 'cashier2_lock',
+          'kitchen_printer_ip', 'cash_printer_ip', 'cashier_display_name', 'cashier2_lock',
           'orders_pwd_required', 'orders_action_pwd'
         ];
         
@@ -91,7 +92,8 @@ const SettingsPage = () => {
               case 'logo_url': setLogoUrl(v); break;
               case 'receipt_footer': setReceiptFooter(v); break;
               case 'bill_footer': setBillFooter(v); break;
-              case 'printer_server_ip': setPrinterServerIp(v); break;
+              case 'kitchen_printer_ip': setKitchenPrinterIp(v); break;
+              case 'cash_printer_ip': setCashPrinterIp(v); break;
               case 'cashier_display_name': setCashierDisplayName(v); break;
               case 'cashier2_lock': setCashier2Lock(v === 'true'); break;
               case 'orders_pwd_required': setOrdersPwdRequired(v === 'true'); break;
@@ -126,8 +128,10 @@ const SettingsPage = () => {
     saveSettingMutation.mutate({ key: 'logo_url', value: logoUrl });
     saveSettingMutation.mutate({ key: 'receipt_footer', value: receiptFooter });
     saveSettingMutation.mutate({ key: 'bill_footer', value: billFooter });
-    saveSettingMutation.mutate({ key: 'printer_server_ip', value: printerServerIp });
-    localStorage.setItem('printer_server_ip', printerServerIp);
+    saveSettingMutation.mutate({ key: 'kitchen_printer_ip', value: kitchenPrinterIp });
+    saveSettingMutation.mutate({ key: 'cash_printer_ip', value: cashPrinterIp });
+    localStorage.setItem('kitchen_printer_ip', kitchenPrinterIp);
+    localStorage.setItem('cash_printer_ip', cashPrinterIp);
   };
 
   const changePasswordMutation = useMutation({
@@ -425,18 +429,29 @@ const SettingsPage = () => {
 
                   <Separator />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="printerIp">Printer Server IP (PC Address)</Label>
-                    <Input
-                      id="printerIp"
-                      placeholder="e.g. 192.168.1.100 or localhost"
-                      value={printerServerIp}
-                      onChange={(e) => setPrinterServerIp(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter the IP address of the PC where your printer server is running.
-                    </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="kitchenPrinterIp">Kitchen Printer IP</Label>
+                      <Input
+                        id="kitchenPrinterIp"
+                        placeholder="e.g. 192.168.1.150"
+                        value={kitchenPrinterIp}
+                        onChange={(e) => setKitchenPrinterIp(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cashPrinterIp">Cash Printer IP</Label>
+                      <Input
+                        id="cashPrinterIp"
+                        placeholder="e.g. 192.168.1.151"
+                        value={cashPrinterIp}
+                        onChange={(e) => setCashPrinterIp(e.target.value)}
+                      />
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enter the IP addresses for your kitchen and cash printers.
+                  </p>
                   
                   <div className="pt-4">
                     <Button onClick={saveAllReceipt}>
