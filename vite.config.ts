@@ -24,16 +24,21 @@ export default defineConfig(({ mode }) => ({
         short_name: "GenX POS",
         description: "A professional POS system for restaurants",
         theme_color: "#ffffff",
+        background_color: "#ffffff",
+        display: "standalone",
+        start_url: "/",
         icons: [
           {
             src: "logo.jpeg",
             sizes: "192x192",
             type: "image/jpeg",
+            purpose: "any maskable"
           },
           {
             src: "logo.jpeg",
             sizes: "512x512",
             type: "image/jpeg",
+            purpose: "any maskable"
           },
         ],
       },

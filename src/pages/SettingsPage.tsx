@@ -1,4 +1,4 @@
-import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload, Users, Plus, Trash2 } from 'lucide-react';
+import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload, Users, Plus, Trash2, Download } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,8 @@ const SettingsPage = () => {
   const [newPrinterName, setNewPrinterName] = useState('');
   const [newPrinterIp, setNewPrinterIp] = useState('');
   const [newPrinterType, setNewPrinterType] = useState<'kitchen' | 'cash' | 'other'>('other');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cashierDisplayName, setCashierDisplayName] = useState(localStorage.getItem('cashier_display_name') || 'Anas');
@@ -125,7 +127,35 @@ const SettingsPage = () => {
         setPrinters(JSON.parse(storedPrinters));
       } catch(e) {}
     }
+
+    // Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstallable(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    }
+  };
 
   const saveSettingMutation = useMutation({
     mutationFn: ({ key, value }: { key: string, value: string }) => api.settings.set(key, value),
@@ -292,6 +322,45 @@ const SettingsPage = () => {
             </TabsContent>
 
             <TabsContent value="business">
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-emerald-600">
+                    <Download className="h-5 w-5" />
+                    App Installation
+                  </CardTitle>
+                  <CardDescription>
+                    Install the POS app on your device for offline use and quick access
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!isInstallable ? (
+                    <div className="flex flex-col items-center gap-4 py-4 text-center">
+                      <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full">
+                        <Download className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-emerald-800">App Already Installed or Not Supported</p>
+                        <p className="text-sm text-emerald-600">The app is already installed or your browser does not support installation prompts.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-6 py-4 text-center">
+                      <div className="bg-blue-50 text-blue-600 p-3 rounded-full animate-bounce">
+                        <Download className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold">Install POS Desktop App</h3>
+                        <p className="text-muted-foreground mb-4">Run Gen X POS as a standalone application for the best experience.</p>
+                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleInstallApp}>
+                          <Download className="h-5 w-5 mr-2" />
+                          Install Now
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
