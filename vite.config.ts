@@ -26,24 +26,40 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
+        orientation: "portrait",
+        scope: "/",
         start_url: "/",
         icons: [
           {
             src: "logo.jpeg",
             sizes: "192x192",
             type: "image/jpeg",
-            purpose: "any maskable"
+            purpose: "any"
           },
           {
             src: "logo.jpeg",
             sizes: "512x512",
             type: "image/jpeg",
-            purpose: "any maskable"
+            purpose: "any"
+          },
+          {
+            src: "logo.jpeg",
+            sizes: "192x192",
+            type: "image/jpeg",
+            purpose: "maskable"
+          },
+          {
+            src: "logo.jpeg",
+            sizes: "512x512",
+            type: "image/jpeg",
+            purpose: "maskable"
           },
         ],
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpeg}"],
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

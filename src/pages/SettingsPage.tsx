@@ -1,4 +1,4 @@
-import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload, Users, Plus, Trash2, Download } from 'lucide-react';
+import { Store, Receipt, Bell, Lock, Image as ImageIcon, Upload, Users, Plus, Trash2, Download, CheckCircle2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,8 +34,7 @@ const SettingsPage = () => {
   const [newPrinterName, setNewPrinterName] = useState('');
   const [newPrinterIp, setNewPrinterIp] = useState('');
   const [newPrinterType, setNewPrinterType] = useState<'kitchen' | 'cash' | 'other'>('other');
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(!!(window as any).deferredPrompt);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cashierDisplayName, setCashierDisplayName] = useState(localStorage.getItem('cashier_display_name') || 'Anas');
@@ -128,14 +127,12 @@ const SettingsPage = () => {
       } catch(e) {}
     }
 
-    // Listen for PWA install prompt
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+    // PWA Install Prompt Listener
+    const handleInstallable = (e: any) => {
       setIsInstallable(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-installable', handleInstallable);
 
     // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -143,17 +140,21 @@ const SettingsPage = () => {
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-installable', handleInstallable);
     };
   }, []);
 
   const handleInstallApp = async () => {
-    if (!deferredPrompt) return;
+    const deferredPrompt = (window as any).deferredPrompt;
+    if (!deferredPrompt) {
+      toast.info("Installation prompt is not ready yet. Please try again in a moment or use the browser's menu to install.");
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setIsInstallable(false);
-      setDeferredPrompt(null);
+      (window as any).deferredPrompt = null;
     }
   };
 
@@ -333,31 +334,57 @@ const SettingsPage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {!isInstallable ? (
-                    <div className="flex flex-col items-center gap-4 py-4 text-center">
-                      <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full">
-                        <Download className="h-6 w-6" />
+                  <div className="space-y-6">
+                    {isInstallable ? (
+                      <div className="flex flex-col items-center gap-6 py-4 text-center">
+                        <div className="bg-blue-50 text-blue-600 p-3 rounded-full animate-bounce">
+                          <Download className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold">Install POS Desktop App</h3>
+                          <p className="text-muted-foreground mb-4">Run Gen X POS as a standalone application for the best experience.</p>
+                          <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleInstallApp}>
+                            <Download className="h-5 w-5 mr-2" />
+                            Install Now
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-emerald-800">App Already Installed or Not Supported</p>
-                        <p className="text-sm text-emerald-600">The app is already installed or your browser does not support installation prompts.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-4 border rounded-lg bg-slate-50 space-y-3">
+                          <div className="flex items-center gap-2 font-bold text-slate-800">
+                            <span className="bg-slate-200 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                            Chrome / Edge (Desktop)
+                          </div>
+                          <p className="text-sm text-slate-600">Look for the <Download className="inline h-3 w-3 mx-1" /> icon in your address bar or click the three dots <b>⋮</b> and select <b>"Install Gen X POS"</b>.</p>
+                        </div>
+
+                        <div className="p-4 border rounded-lg bg-slate-50 space-y-3">
+                          <div className="flex items-center gap-2 font-bold text-slate-800">
+                            <span className="bg-slate-200 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                            iPhone / iPad (Safari)
+                          </div>
+                          <p className="text-sm text-slate-600">Tap the <b>Share</b> button <span className="inline-block border p-0.5 rounded">↑</span> at the bottom and select <b>"Add to Home Screen"</b>.</p>
+                        </div>
+
+                        <div className="p-4 border rounded-lg bg-slate-50 space-y-3">
+                          <div className="flex items-center gap-2 font-bold text-slate-800">
+                            <span className="bg-slate-200 w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span>
+                            Android (Chrome)
+                          </div>
+                          <p className="text-sm text-slate-600">Tap the three dots <b>⋮</b> in the top corner and select <b>"Install app"</b> or <b>"Add to Home screen"</b>.</p>
+                        </div>
+
+                        <div className="p-4 border rounded-lg bg-slate-50 space-y-3">
+                          <div className="flex items-center gap-2 font-bold text-slate-800 text-emerald-600">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Offline Ready
+                          </div>
+                          <p className="text-sm text-slate-600">Once installed, you can open the app from your home screen even without an internet connection.</p>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-6 py-4 text-center">
-                      <div className="bg-blue-50 text-blue-600 p-3 rounded-full animate-bounce">
-                        <Download className="h-8 w-8" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold">Install POS Desktop App</h3>
-                        <p className="text-muted-foreground mb-4">Run Gen X POS as a standalone application for the best experience.</p>
-                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700" onClick={handleInstallApp}>
-                          <Download className="h-5 w-5 mr-2" />
-                          Install Now
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 

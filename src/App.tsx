@@ -18,12 +18,32 @@ import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 import LicenseGenerator from "./pages/LicenseGenerator";
 import { LicenseGate } from "./components/LicenseGate";
+import { useEffect } from "react";
+
 const queryClient = new QueryClient();
 
 const HomeRoute = () => <Index />;
 
-
 const App = () => {
+  useEffect(() => {
+    // Global PWA Install Handler
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      (window as any).deferredPrompt = e;
+      console.log('PWA: beforeinstallprompt event captured');
+      // Dispatch a custom event so components can react
+      window.dispatchEvent(new CustomEvent('pwa-installable', { detail: true }));
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
