@@ -77,25 +77,31 @@ const CartPanel = () => {
     contentRef: receiptRef,
     documentTitle: "Receipt",
     onAfterPrint: () => {
-      // Send to BOTH printers as requested
       const htmlContent = receiptRef.current?.innerHTML || '';
+      const orderData = { ...lastOrder, html: htmlContent };
       
-      // 1. Send to Cash Printer
-      fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: htmlContent })
-      }).catch(err => console.error("Cash printing failed:", err));
+      // Send to all relevant printers
+      const cashUrls = getPrinterUrls('/print/bill');
+      cashUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).catch(err => console.error(`Printing to ${url} failed:`, err));
+      });
 
-      // 2. Send to Kitchen Printer (KOT style)
+      const kitchenUrls = getPrinterUrls('/print/kot');
       const kotHtml = kotRef.current?.innerHTML || htmlContent;
-      fetch(getPrinterUrl('/print/kot'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: kotHtml })
-      }).catch(err => console.error("Kitchen printing failed:", err));
+      const kotData = { ...lastOrder, html: kotHtml };
+      kitchenUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(kotData)
+        }).catch(err => console.error(`KOT Printing to ${url} failed:`, err));
+      });
 
-      toast.success('Print requests sent to both printers');
+      toast.success('Print requests sent to all printers');
     }
   });
 
@@ -104,23 +110,27 @@ const CartPanel = () => {
     documentTitle: "KOT",
     onAfterPrint: () => {
       const htmlContent = kotRef.current?.innerHTML || '';
+      const orderData = { ...lastOrder, html: htmlContent };
       
-      // Send to BOTH printers as requested
-      // 1. Send to Kitchen Printer
-      fetch(getPrinterUrl('/print/kot'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: htmlContent })
-      }).catch(err => console.error("Kitchen printing failed:", err));
+      const kitchenUrls = getPrinterUrls('/print/kot');
+      kitchenUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).catch(err => console.error(`Kitchen printing to ${url} failed:`, err));
+      });
 
-      // 2. Send to Cash Printer
-      fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: htmlContent })
-      }).catch(err => console.error("Cash printing failed:", err));
+      const cashUrls = getPrinterUrls('/print/bill');
+      cashUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).catch(err => console.error(`Cash printing to ${url} failed:`, err));
+      });
 
-      toast.success('KOT requests sent to both printers');
+      toast.success('KOT requests sent to all printers');
     }
   });
 
@@ -129,23 +139,27 @@ const CartPanel = () => {
     documentTitle: "Bill",
     onAfterPrint: () => {
       const htmlContent = billRef.current?.innerHTML || '';
+      const orderData = { ...lastOrder, html: htmlContent };
 
-      // Send to BOTH printers as requested
-      // 1. Send to Cash Printer
-      fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: htmlContent })
-      }).catch(err => console.error("Cash printing failed:", err));
+      const cashUrls = getPrinterUrls('/print/bill');
+      cashUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).catch(err => console.error(`Cash printing to ${url} failed:`, err));
+      });
 
-      // 2. Send to Kitchen Printer
-      fetch(getPrinterUrl('/print/kot'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...lastOrder, html: htmlContent })
-      }).catch(err => console.error("Kitchen printing failed:", err));
+      const kitchenUrls = getPrinterUrls('/print/kot');
+      kitchenUrls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        }).catch(err => console.error(`Kitchen printing to ${url} failed:`, err));
+      });
 
-      toast.success('Bill requests sent to both printers');
+      toast.success('Bill requests sent to all printers');
     }
   });
 
@@ -234,11 +248,40 @@ const CartPanel = () => {
     queryFn: () => api.settings.get('cash_printer_ip'),
   });
 
-  const getPrinterUrl = (endpoint: string) => {
-    const ip = endpoint.includes('kot') 
-      ? (kitchenPrinterIP || localStorage.getItem('kitchen_printer_ip') || '192.168.1.150')
-      : (cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151');
-    return `http://${ip}:5000${endpoint}`;
+  const { data: printersListStr } = useQuery({
+    queryKey: ['settings', 'printers'],
+    queryFn: () => api.settings.get('printers'),
+  });
+
+  const getPrinterUrls = (endpoint: string) => {
+    const urls: string[] = [];
+    const isKot = endpoint.includes('kot');
+    
+    // Add default printers for backward compatibility
+    const defaultKitchenIp = kitchenPrinterIP || localStorage.getItem('kitchen_printer_ip') || '192.168.1.150';
+    const defaultCashIp = cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151';
+    
+    if (isKot) {
+      urls.push(`http://${defaultKitchenIp}:5000${endpoint}`);
+    } else {
+      urls.push(`http://${defaultCashIp}:5000${endpoint}`);
+    }
+
+    // Add additional printers from the list
+    const printersStr = printersListStr || localStorage.getItem('printers');
+    if (printersStr) {
+      try {
+        const printers = JSON.parse(printersStr) as { ip: string, type: string }[];
+        printers.forEach(p => {
+          if ((isKot && p.type === 'kitchen') || (!isKot && p.type === 'cash') || p.type === 'other') {
+            urls.push(`http://${p.ip}:5000${endpoint}`);
+          }
+        });
+      } catch (e) {}
+    }
+
+    // Remove duplicates
+    return Array.from(new Set(urls));
   };
 
   const createOrderMutation = useMutation({

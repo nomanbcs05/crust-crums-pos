@@ -30,6 +30,10 @@ const SettingsPage = () => {
   const [billFooter, setBillFooter] = useState('!!!!FOR THE LOVE OF FOOD !!!!');
   const [kitchenPrinterIp, setKitchenPrinterIp] = useState(localStorage.getItem('kitchen_printer_ip') || '192.168.1.150');
   const [cashPrinterIp, setCashPrinterIp] = useState(localStorage.getItem('cash_printer_ip') || '192.168.1.151');
+  const [printers, setPrinters] = useState<{ id: string, name: string, ip: string, type: 'kitchen' | 'cash' | 'other' }[]>([]);
+  const [newPrinterName, setNewPrinterName] = useState('');
+  const [newPrinterIp, setNewPrinterIp] = useState('');
+  const [newPrinterType, setNewPrinterType] = useState<'kitchen' | 'cash' | 'other'>('other');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [cashierDisplayName, setCashierDisplayName] = useState(localStorage.getItem('cashier_display_name') || 'Anas');
@@ -75,7 +79,7 @@ const SettingsPage = () => {
           'business_name', 'phone', 'address', 'city', 'tax_id', 
           'website', 'email', 'logo_url', 'receipt_footer', 'bill_footer',
           'kitchen_printer_ip', 'cash_printer_ip', 'cashier_display_name', 'cashier2_lock',
-          'orders_pwd_required', 'orders_action_pwd'
+          'orders_pwd_required', 'orders_action_pwd', 'printers'
         ];
         
         for (const key of keys) {
@@ -98,6 +102,13 @@ const SettingsPage = () => {
               case 'cashier2_lock': setCashier2Lock(v === 'true'); break;
               case 'orders_pwd_required': setOrdersPwdRequired(v === 'true'); break;
               case 'orders_action_pwd': setOrdersActionPwd(v); break;
+              case 'printers': 
+                try {
+                  setPrinters(JSON.parse(v));
+                } catch(e) {
+                  console.error("Failed to parse printers", e);
+                }
+                break;
             }
           }
         }
@@ -106,6 +117,14 @@ const SettingsPage = () => {
       }
     };
     loadSettings();
+    
+    // Also load from localStorage for offline/immediate use
+    const storedPrinters = localStorage.getItem('printers');
+    if (storedPrinters) {
+      try {
+        setPrinters(JSON.parse(storedPrinters));
+      } catch(e) {}
+    }
   }, []);
 
   const saveSettingMutation = useMutation({
@@ -130,8 +149,30 @@ const SettingsPage = () => {
     saveSettingMutation.mutate({ key: 'bill_footer', value: billFooter });
     saveSettingMutation.mutate({ key: 'kitchen_printer_ip', value: kitchenPrinterIp });
     saveSettingMutation.mutate({ key: 'cash_printer_ip', value: cashPrinterIp });
+    saveSettingMutation.mutate({ key: 'printers', value: JSON.stringify(printers) });
     localStorage.setItem('kitchen_printer_ip', kitchenPrinterIp);
     localStorage.setItem('cash_printer_ip', cashPrinterIp);
+    localStorage.setItem('printers', JSON.stringify(printers));
+  };
+
+  const handleAddPrinter = () => {
+    if (!newPrinterName || !newPrinterIp) {
+      toast.error('Please enter printer name and IP');
+      return;
+    }
+    const newPrinter = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newPrinterName,
+      ip: newPrinterIp,
+      type: newPrinterType
+    };
+    setPrinters([...printers, newPrinter]);
+    setNewPrinterName('');
+    setNewPrinterIp('');
+  };
+
+  const handleRemovePrinter = (id: string) => {
+    setPrinters(printers.filter(p => p.id !== id));
   };
 
   const changePasswordMutation = useMutation({
@@ -450,8 +491,67 @@ const SettingsPage = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Enter the IP addresses for your kitchen and cash printers.
+                    Enter the default IP addresses for your kitchen and cash printers.
                   </p>
+
+                  <Separator />
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Additional Printers</h3>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1 space-y-2">
+                        <Label>Printer Name</Label>
+                        <Input 
+                          placeholder="Kitchen 2 / Juice Bar" 
+                          value={newPrinterName} 
+                          onChange={(e) => setNewPrinterName(e.target.value)} 
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label>IP Address</Label>
+                        <Input 
+                          placeholder="192.168.1.X" 
+                          value={newPrinterIp} 
+                          onChange={(e) => setNewPrinterIp(e.target.value)} 
+                        />
+                      </div>
+                      <div className="w-32 space-y-2">
+                        <Label>Type</Label>
+                        <select 
+                          className="w-full border rounded-md h-10 px-3"
+                          value={newPrinterType}
+                          onChange={(e) => setNewPrinterType(e.target.value as any)}
+                        >
+                          <option value="kitchen">Kitchen</option>
+                          <option value="cash">Cash</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <Button onClick={handleAddPrinter}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {printers.map((printer) => (
+                        <div key={printer.id} className="flex items-center justify-between p-3 border rounded-lg bg-slate-50">
+                          <div>
+                            <p className="font-bold uppercase">{printer.name}</p>
+                            <p className="text-xs text-muted-foreground uppercase">{printer.ip} ({printer.type})</p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemovePrinter(printer.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   
                   <div className="pt-4">
                     <Button onClick={saveAllReceipt}>

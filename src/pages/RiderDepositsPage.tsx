@@ -150,9 +150,37 @@ const RiderDepositsPage = () => {
     queryFn: () => api.settings.get('cash_printer_ip'),
   });
 
-  const getPrinterUrl = (endpoint: string) => {
-    const ip = cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151';
-    return `http://${ip}:5000${endpoint}`;
+  const { data: printersListStr } = useQuery({
+    queryKey: ['settings', 'printers'],
+    queryFn: () => api.settings.get('printers'),
+  });
+
+  const getPrinterUrls = (endpoint: string) => {
+    const urls: string[] = [];
+    const isKot = endpoint.includes('kot');
+    
+    // Add default printers for backward compatibility
+    const defaultCashIp = cashPrinterIP || localStorage.getItem('cash_printer_ip') || '192.168.1.151';
+    
+    if (!isKot) {
+      urls.push(`http://${defaultCashIp}:5000${endpoint}`);
+    }
+
+    // Add additional printers from the list
+    const printersStr = printersListStr || localStorage.getItem('printers');
+    if (printersStr) {
+      try {
+        const printers = JSON.parse(printersStr) as { ip: string, type: string }[];
+        printers.forEach(p => {
+          if ((!isKot && p.type === 'cash') || p.type === 'other') {
+            urls.push(`http://${p.ip}:5000${endpoint}`);
+          }
+        });
+      } catch (e) {}
+    }
+
+    // Remove duplicates
+    return Array.from(new Set(urls));
   };
 
   const handlePrint = useReactToPrint({
@@ -160,14 +188,21 @@ const RiderDepositsPage = () => {
     documentTitle: "",
     onAfterPrint: () => {
       const htmlContent = printRef.current?.innerHTML || '';
-      fetch(getPrinterUrl('/print/bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderNumber: 'DEPOSIT',
-          html: htmlContent
-        })
-      }).catch(err => console.error("Local printing failed:", err));
+      const printData = {
+        orderNumber: 'DEPOSIT',
+        html: htmlContent
+      };
+
+      // Send to all relevant printers (usually cash printers for deposits)
+      const urls = getPrinterUrls('/print/bill');
+      urls.forEach(url => {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(printData)
+        }).catch(err => console.error(`Printing to ${url} failed:`, err));
+      });
+
       toast.success('Rider deposits printed');
       setShowPrintPreview(false);
     },

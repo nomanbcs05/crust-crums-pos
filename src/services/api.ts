@@ -161,20 +161,32 @@ export const api = {
   },
   settings: {
     get: async (key: string) => {
-      const { data, error } = await (supabase as any)
-        .from('app_settings')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
-      if (error) {
-        if (String(error.message || '').toLowerCase().includes('relation') || error.code === '42P01') {
-          return null;
+      // Try to get from localStorage first for immediate/offline use
+      const cached = localStorage.getItem(`setting_${key}`);
+      
+      try {
+        const { data, error } = await (supabase as any)
+          .from('app_settings')
+          .select('value')
+          .eq('key', key)
+          .maybeSingle();
+        if (error) {
+          if (String(error.message || '').toLowerCase().includes('relation') || error.code === '42P01') {
+            return cached || null;
+          }
+          throw error;
         }
-        throw error;
+        if (data?.value) {
+          localStorage.setItem(`setting_${key}`, data.value);
+          return data.value;
+        }
+      } catch (e) {
+        console.error(`Failed to fetch setting ${key} from Supabase, using cache`, e);
       }
-      return data?.value ?? null;
+      return cached || null;
     },
     set: async (key: string, value: string) => {
+      localStorage.setItem(`setting_${key}`, value);
       const { data, error } = await (supabase as any)
         .from('app_settings')
         .upsert({ key, value, updated_at: new Date().toISOString() } as any, { onConflict: 'key' })
@@ -191,12 +203,22 @@ export const api = {
   },
   categories: {
     getAll: async () => {
-      const { data, error } = await supabase
-        .from('categories' as any)
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as unknown as Category[];
+      const cached = localStorage.getItem('cached_categories');
+      try {
+        const { data, error } = await supabase
+          .from('categories' as any)
+          .select('*')
+          .order('name');
+        if (error) throw error;
+        if (data) {
+          localStorage.setItem('cached_categories', JSON.stringify(data));
+          return data as unknown as Category[];
+        }
+      } catch (e) {
+        console.error('Failed to fetch categories from Supabase, using cache', e);
+        if (cached) return JSON.parse(cached);
+      }
+      return cached ? JSON.parse(cached) : [];
     },
     create: async (category: Omit<Category, 'id'>) => {
       const { data, error } = await supabase
@@ -287,12 +309,22 @@ export const api = {
       }
     },
     getAll: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as any[];
+      const cached = localStorage.getItem('cached_products');
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name');
+        if (error) throw error;
+        if (data) {
+          localStorage.setItem('cached_products', JSON.stringify(data));
+          return data as unknown as Product[];
+        }
+      } catch (e) {
+        console.error('Failed to fetch products from Supabase, using cache', e);
+        if (cached) return JSON.parse(cached);
+      }
+      return cached ? JSON.parse(cached) : [];
     },
     create: async (product: ProductInsert) => {
       const { data, error } = await supabase
